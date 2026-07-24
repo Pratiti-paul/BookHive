@@ -1,4 +1,5 @@
 import useAuth from "../../hooks/useAuth";
+import logoFull from "../../assets/logo-full.svg";
 
 function Home() {
     const { user, logout } = useAuth();
@@ -6,9 +7,15 @@ function Home() {
     return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-yellow-50">
 
-            <h1 className="text-5xl font-bold">
-                Welcome {user?.name} 🐝
-            </h1>
+                <img
+                    src={logoFull}
+                    alt="BookHive"
+                    className="object-contain w-48 md:w-64 mx-auto mb-6"
+                />
+
+                <h1 className="text-4xl font-bold">
+                    Welcome {user?.name}
+                </h1>
 
             <p className="mt-4 text-gray-600">
                 {user?.email}

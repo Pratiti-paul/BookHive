@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
+import logoFull from "../../assets/logo-full.svg";
 
 import { registerUser } from "../../services/authService";
 
@@ -40,13 +41,13 @@ function RegisterForm() {
     <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8">
 
       <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold text-yellow-500">
-          🐝 BookHive
-        </h1>
+        <img
+          src={logoFull}
+          alt="BookHive"
+          className="mx-auto object-contain w-36 md:w-44"
+        />
 
-        <p className="text-gray-500 mt-2">
-          Create your account
-        </p>
+        <p className="text-gray-500 mt-2">Create your account</p>
       </div>
 
       <form
