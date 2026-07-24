@@ -75,13 +75,48 @@ export const createBook = async (req, res) => {
 // Get All Books
 export const getAllBooks = async (req, res) => {
   try {
-    const books = await Book.find()
+    const {
+      search,
+      category,
+      status,
+      sort = "createdAt",
+      page = 1,
+      limit = 10,
+    } = req.query;
+
+    const query = {};
+
+    // Search by title or author
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: "i" } },
+        { author: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    // Filter by category
+    if (category) {
+      query.category = category;
+    }
+
+    // Filter by status
+    if (status) {
+      query.status = status;
+    }
+
+    const books = await Book.find(query)
       .populate("addedBy", "name email")
-      .sort({ createdAt: -1 });
+      .sort(sort)
+      .skip((Number(page) - 1) * Number(limit))
+      .limit(Number(limit));
+
+    const totalBooks = await Book.countDocuments(query);
 
     res.status(200).json({
       success: true,
-      count: books.length,
+      totalBooks,
+      currentPage: Number(page),
+      totalPages: Math.ceil(totalBooks / Number(limit)),
       books,
     });
   } catch (error) {
