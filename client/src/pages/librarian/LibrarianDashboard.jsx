@@ -1,11 +1,14 @@
+import DashboardLayout from "../../layouts/DashboardLayout";
+import PageContainer from "../../components/common/PageContainer";
+
 function LibrarianDashboard() {
   return (
-    <div className="p-8">
-      <h1 className="text-3xl font-bold">Librarian Dashboard</h1>
+    <DashboardLayout><PageContainer>
+      <h1 className="text-3xl font-bold text-gray-900">Librarian Dashboard</h1>
       <p className="mt-2 text-gray-600">
         Manage books, students and borrow requests.
       </p>
-    </div>
+    </PageContainer></DashboardLayout>
   );
 }
 

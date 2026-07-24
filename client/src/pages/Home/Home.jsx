@@ -1,19 +1,13 @@
 import useAuth from "../../hooks/useAuth";
-import logoFull from "../../assets/logo-full.svg";
+import DashboardLayout from "../../layouts/DashboardLayout";
+import PageContainer from "../../components/common/PageContainer";
 
 function Home() {
-    const { user, logout } = useAuth();
+    const { user } = useAuth();
 
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center bg-yellow-50">
-
-                <img
-                    src={logoFull}
-                    alt="BookHive"
-                    className="object-contain w-48 md:w-64 mx-auto mb-6"
-                />
-
-                <h1 className="text-4xl font-bold">
+        <DashboardLayout><PageContainer>
+                <h1 className="text-3xl font-bold text-gray-900">
                     Welcome {user?.name}
                 </h1>
 
@@ -21,14 +15,7 @@ function Home() {
                 {user?.email}
             </p>
 
-            <button
-                onClick={logout}
-                className="mt-8 bg-red-500 text-white px-6 py-3 rounded-lg"
-            >
-                Logout
-            </button>
-
-        </div>
+        </PageContainer></DashboardLayout>
     );
 }
 
