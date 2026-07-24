@@ -28,6 +28,12 @@ const userSchema = new mongoose.Schema(
       default: "student",
     },
 
+    library: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Library",
+    default: null,
+  },
+
     profileImage: {
       type: String,
       default: "",
