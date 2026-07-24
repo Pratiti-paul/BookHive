@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Bell, ChevronDown, LogOut, Menu, Moon, Search, Settings, Sun, User } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import useAuth from "../../hooks/useAuth";
-import logoIcon from "../../assets/logo-icon.svg";
+import logo from "../../assets/logo.png";
 
 const getInitials = (name = "") => name.split(" ").filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "BH";
 
@@ -35,7 +35,9 @@ function Navbar({ onMenuClick }) {
           <Menu size={22} />
         </button>
         <Link to="/" className="flex min-w-fit items-center gap-2.5" aria-label="BookHive home">
-          <img src={logoIcon} alt="" className="h-9 w-9" />
+          <span className="h-9 w-9 overflow-hidden rounded-lg bg-white">
+            <img src={logo} alt="" className="h-[78px] w-[78px] max-w-none -translate-x-5 -translate-y-4 object-contain" />
+          </span>
           <span className="hidden leading-tight sm:block"><span className="block text-lg font-bold tracking-tight text-gray-900">BookHive</span><span className="block text-[10px] font-medium uppercase tracking-wider text-amber-600">AI Powered Library</span></span>
         </Link>
 
