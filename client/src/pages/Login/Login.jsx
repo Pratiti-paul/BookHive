@@ -1,9 +1,9 @@
+import LoginForm from "../../components/forms/LoginForm";
+
 function Login() {
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <h1 className="text-4xl font-bold">
-        Login Page
-      </h1>
+    <div className="min-h-screen bg-yellow-50 flex items-center justify-center p-6">
+      <LoginForm />
     </div>
   );
 }
