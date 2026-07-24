@@ -5,9 +5,11 @@ import toast from "react-hot-toast";
 import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 
 import { loginUser } from "../../services/authService";
+import useAuth from "../../hooks/useAuth";
 
 function LoginForm() {
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -24,14 +26,8 @@ function LoginForm() {
 
       const response = await loginUser(data);
 
-      // Save JWT
-      localStorage.setItem("token", response.token);
-
-      // Save logged-in user
-      localStorage.setItem(
-        "user",
-        JSON.stringify(response.user)
-      );
+      // Save user and token in Auth Context
+      login(response.token, response.user);
 
       toast.success(response.message);
 
@@ -107,9 +103,7 @@ function LoginForm() {
 
             <button
               type="button"
-              onClick={() =>
-                setShowPassword(!showPassword)
-              }
+              onClick={() => setShowPassword(!showPassword)}
             >
               {showPassword ? (
                 <EyeOff size={20} />
@@ -127,8 +121,9 @@ function LoginForm() {
         </div>
 
         <button
+          type="submit"
           disabled={loading}
-          className="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-3 rounded-lg font-semibold transition"
+          className="w-full bg-yellow-500 hover:bg-yellow-600 transition text-white py-3 rounded-lg font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {loading ? "Signing In..." : "Login"}
         </button>
@@ -138,7 +133,7 @@ function LoginForm() {
         Don't have an account?{" "}
         <Link
           to="/register"
-          className="text-yellow-500 font-semibold"
+          className="text-yellow-500 font-semibold hover:underline"
         >
           Register
         </Link>
