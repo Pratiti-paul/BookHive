@@ -38,12 +38,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
-
-    library: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Library",
-      default: null,
-    },
+    
   },
   {
     timestamps: true,

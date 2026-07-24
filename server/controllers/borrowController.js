@@ -8,7 +8,9 @@ import Library from "../models/Library.js";
 // @access  Private (Librarian/Admin)
 export const issueBook = async (req, res) => {
   try {
-    const { studentId, bookId, library } = req.body;
+    const { studentId, bookId } = req.body;
+    // library may be provided as `library` or `libraryId` in the body
+    const libraryId = req.body.library || req.body.libraryId;
 
     // Check student
     const student = await User.findById(studentId);
@@ -31,9 +33,9 @@ export const issueBook = async (req, res) => {
     }
 
     // Check library
-    const library = await Library.findById(library);
+    const libraryDoc = await Library.findById(libraryId);
 
-    if (!library) {
+    if (!libraryDoc) {
       return res.status(404).json({
         success: false,
         message: "Library not found.",
@@ -56,7 +58,7 @@ export const issueBook = async (req, res) => {
     const borrow = await Borrow.create({
       student: student._id,
       book: book._id,
-      library: library._id,
+      library: libraryDoc._id,
       dueDate,
     });
 

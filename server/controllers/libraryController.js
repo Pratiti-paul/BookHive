@@ -198,9 +198,9 @@ export const assignLibrarian = async (req, res) => {
   try {
     const { library, userId } = req.params;
 
-    const library = await Library.findById(library);
+    const libraryDoc = await Library.findById(library);
 
-    if (!library) {
+    if (!libraryDoc) {
       return res.status(404).json({
         success: false,
         message: "Library not found.",
@@ -224,23 +224,23 @@ export const assignLibrarian = async (req, res) => {
     }
 
     // Remove old assignment if any
-    if (library.librarian) {
-      await User.findByIdAndUpdate(library.librarian, {
+    if (libraryDoc.librarian) {
+      await User.findByIdAndUpdate(libraryDoc.librarian, {
         library: null,
       });
     }
 
     // Update both collections
-    library.librarian = user._id;
-    await library.save();
+    libraryDoc.librarian = user._id;
+    await libraryDoc.save();
 
-    user.library = library._id;
+    user.library = libraryDoc._id;
     await user.save();
 
     res.status(200).json({
       success: true,
       message: "Librarian assigned successfully.",
-      library,
+      library: libraryDoc,
     });
   } catch (error) {
     console.error(error);
