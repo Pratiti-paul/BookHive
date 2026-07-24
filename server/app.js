@@ -3,6 +3,7 @@ import cors from "cors";
 import authRoutes from "./routes/authRoutes.js";
 import bookRoutes from "./routes/bookRoutes.js";
 import libraryRoutes from "./routes/libraryRoutes.js";
+import borrowRoutes from "./routes/borrowRoutes.js";
 
 const app = express();
 
@@ -14,6 +15,7 @@ app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/books", bookRoutes);
 app.use("/api/libraries", libraryRoutes);
+app.use("/api/borrow", borrowRoutes);
 
 // Test Route
 app.get("/", (req, res) => {

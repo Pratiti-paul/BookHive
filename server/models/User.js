@@ -39,7 +39,7 @@ const userSchema = new mongoose.Schema(
       default: "",
     },
 
-    libraryId: {
+    library: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Library",
       default: null,

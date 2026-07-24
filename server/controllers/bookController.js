@@ -54,7 +54,7 @@ export const createBook = async (req, res) => {
       totalCopies,
       availableCopies: availableCopies ?? totalCopies,
       addedBy: req.user?._id,
-      libraryId: req.user?.libraryId,
+      library: req.user?.library,
     });
 
     res.status(201).json({

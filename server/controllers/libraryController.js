@@ -192,13 +192,13 @@ export const deleteLibrary = async (req, res) => {
 };
 
 // @desc    Assign librarian to a library
-// @route   PUT /api/libraries/:libraryId/assign/:userId
+// @route   PUT /api/libraries/:library/assign/:userId
 // @access  Private (Admin)
 export const assignLibrarian = async (req, res) => {
   try {
-    const { libraryId, userId } = req.params;
+    const { library, userId } = req.params;
 
-    const library = await Library.findById(libraryId);
+    const library = await Library.findById(library);
 
     if (!library) {
       return res.status(404).json({

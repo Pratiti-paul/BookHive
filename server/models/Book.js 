@@ -63,10 +63,9 @@ const bookSchema = new mongoose.Schema(
     },
 
     library: {
-  type: mongoose.Schema.Types.ObjectId,
-  ref: "Library",
-  required: true,
-},
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Library",
+    },
 
     addedBy: {
       type: mongoose.Schema.Types.ObjectId,

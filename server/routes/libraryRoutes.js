@@ -24,7 +24,7 @@ router
   .delete(protect, authorize("admin"), deleteLibrary);
 
 router.put(
-  "/:libraryId/assign/:userId",
+  "/:library/assign/:userId",
   protect,
   authorize("admin"),
   assignLibrarian
