@@ -4,9 +4,11 @@ import Home from "../pages/Home/Home.jsx";
 import Login from "../pages/Login/Login.jsx";
 import Register from "../pages/Register/Register.jsx";
 import Unauthorized from "../pages/Unauthorized.jsx";
-
 import ProtectedRoute from "./ProtectedRoute";
 import RoleRoute from "./RoleRoute";
+import StudentDashboard from "../pages/student/StudentDashboard.jsx";
+import LibrarianDashboard from "../pages/librarian/LibrarianDashboard.jsx";
+import AdminDashboard from "../pages/Admin/AdminDashboard.jsx";
 
 function AppRoutes() {
   return (
@@ -25,35 +27,32 @@ function AppRoutes() {
         }
       />
 
-      {/* Student */}
-      <Route
-        path="/student"
-        element={
-          <RoleRoute allowedRoles={["student"]}>
-            <Home />
-          </RoleRoute>
-        }
-      />
+        <Route
+      path="/student/dashboard"
+      element={
+        <RoleRoute allowedRoles={["student"]}>
+          <StudentDashboard />
+        </RoleRoute>
+      }
+    />
 
-      {/* Librarian */}
-      <Route
-        path="/librarian"
-        element={
-          <RoleRoute allowedRoles={["librarian"]}>
-            <Home />
-          </RoleRoute>
-        }
-      />
+    <Route
+      path="/librarian/dashboard"
+      element={
+        <RoleRoute allowedRoles={["librarian"]}>
+          <LibrarianDashboard />
+        </RoleRoute>
+      }
+    />
 
-      {/* Admin */}
-      <Route
-        path="/admin"
-        element={
-          <RoleRoute allowedRoles={["admin"]}>
-            <Home />
-          </RoleRoute>
-        }
-      />
+    <Route
+      path="/admin/dashboard"
+      element={
+        <RoleRoute allowedRoles={["admin"]}>
+          <AdminDashboard />
+        </RoleRoute>
+      }
+    />
 
       <Route
         path="/unauthorized"

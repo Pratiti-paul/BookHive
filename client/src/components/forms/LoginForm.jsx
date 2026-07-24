@@ -43,15 +43,21 @@ function LoginForm() {
   };
 
   return (
-    <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8">
+    <div className="w-full max-w-[500px] bg-white rounded-2xl shadow-xl p-8">
       <div className="text-center mb-8">
         <img
           src={logoFull}
           alt="BookHive"
-          className="mx-auto object-contain w-36 md:w-44"
+          className="mx-auto object-contain w-[130px] md:w-[140px]"
         />
 
-        <p className="text-gray-500 mt-2">Welcome back</p>
+        <h1 className="text-2xl md:text-3xl font-semibold text-gray-800 mt-4">
+          Welcome back
+        </h1>
+
+        <p className="text-gray-500 mt-2 text-sm">
+          Sign in to continue to BookHive.
+        </p>
       </div>
 
       <form
