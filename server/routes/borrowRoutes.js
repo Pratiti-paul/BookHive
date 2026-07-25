@@ -5,6 +5,7 @@ import {
   renewBook,
   getMyBorrowedBooks,
   getAllBorrowRecords,
+  getOverdueBooks,
 } from "../controllers/borrowController.js";
 import { protect, authorize } from "../middleware/authMiddleware.js";
 
@@ -29,6 +30,13 @@ router.put(
   protect,
   authorize("admin", "librarian"),
   renewBook
+);
+
+router.get(
+  "/overdue",
+  protect,
+  authorize("admin", "librarian"),
+  getOverdueBooks
 );
 
 router.get(

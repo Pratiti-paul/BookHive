@@ -183,6 +183,36 @@ export const getAllBorrowRecords = async (req, res) => {
   }
 };
 
+// @desc    Get overdue books
+// @route   GET /api/borrow/overdue
+// @access  Private (Admin/Librarian)
+export const getOverdueBooks = async (req, res) => {
+  try {
+    const today = new Date();
+
+    const borrows = await Borrow.find({
+      dueDate: { $lt: today },
+      status: "borrowed",
+    })
+      .populate("student", "name email")
+      .populate("book", "title author")
+      .populate("library", "name");
+
+    res.status(200).json({
+      success: true,
+      count: borrows.length,
+      borrows,
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
+  }
+};
+
 // @desc    Issue a Book
 // @route   POST /api/borrow
 // @access  Private (Admin/Librarian)
