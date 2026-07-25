@@ -49,16 +49,32 @@ export const returnBook = async (req, res) => {
 
     await book.save();
 
-    // Update borrow record
-    borrow.status = "returned";
+    // Set return date
     borrow.returnDate = new Date();
+
+    // Calculate fine
+    const dueDate = new Date(borrow.dueDate);
+    const returnDate = borrow.returnDate;
+
+    if (returnDate > dueDate) {
+    const overdueDays = Math.ceil(
+        (returnDate - dueDate) / (1000 * 60 * 60 * 24)
+    );
+
+    borrow.fine = overdueDays * 10; // £10 per day (or ₹10 if you later choose to localize)
+    } else {
+    borrow.fine = 0;
+    }
+
+    borrow.status = "returned";
 
     await borrow.save();
 
     res.status(200).json({
-      success: true,
-      message: "Book returned successfully.",
-      borrow,
+        success: true,
+        message: "Book returned successfully.",
+        fine: borrow.fine,
+        borrow,
     });
 
   } catch (error) {
