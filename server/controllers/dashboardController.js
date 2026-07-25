@@ -40,6 +40,36 @@ export const getDashboardStats = async (req, res) => {
     const totalFineCollected =
       fineResult.length > 0 ? fineResult[0].totalFine : 0;
 
+    const mostBorrowedBooks = await Borrow.aggregate([
+    {
+        $group: {
+        _id: "$book",
+        borrowCount: {
+            $sum: 1,
+        },
+        },
+    },
+    {
+        $sort: {
+        borrowCount: -1,
+        },
+    },
+    {
+        $limit: 5,
+    },
+    {
+        $lookup: {
+        from: "books",
+        localField: "_id",
+        foreignField: "_id",
+        as: "book",
+        },
+    },
+    {
+        $unwind: "$book",
+    },
+    ]);
+
     res.status(200).json({
       success: true,
       stats: {
@@ -50,6 +80,7 @@ export const getDashboardStats = async (req, res) => {
         returnedBooks,
         overdueBooks,
         totalFineCollected,
+        mostBorrowedBooks,
       },
     });
   } catch (error) {
