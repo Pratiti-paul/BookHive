@@ -3,6 +3,7 @@ import {
   issueBook,
   returnBook,
   renewBook,
+  getMyBorrowedBooks,
 } from "../controllers/borrowController.js";
 import { protect, authorize } from "../middleware/authMiddleware.js";
 
@@ -27,6 +28,13 @@ router.put(
   protect,
   authorize("admin", "librarian"),
   renewBook
+);
+
+router.get(
+  "/my-books",
+  protect,
+  authorize("student"),
+  getMyBorrowedBooks
 );
 
 export default router;

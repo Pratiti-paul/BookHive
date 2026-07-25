@@ -128,6 +128,34 @@ export const renewBook = async (req, res) => {
   }
 };
 
+// @desc    Get logged-in student's borrowed books
+// @route   GET /api/borrow/my-books
+// @access  Private (Student)
+export const getMyBorrowedBooks = async (req, res) => {
+  try {
+    const borrows = await Borrow.find({
+      student: req.user._id,
+    })
+      .populate("book")
+      .populate("library", "name city")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: borrows.length,
+      borrows,
+    });
+
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
+  }
+};
+
 // @desc    Issue a Book
 // @route   POST /api/borrow
 // @access  Private (Admin/Librarian)
