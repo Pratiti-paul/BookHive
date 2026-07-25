@@ -156,6 +156,33 @@ export const getMyBorrowedBooks = async (req, res) => {
   }
 };
 
+// @desc    Get all borrow records
+// @route   GET /api/borrow
+// @access  Private (Admin/Librarian)
+export const getAllBorrowRecords = async (req, res) => {
+  try {
+    const borrows = await Borrow.find()
+      .populate("student", "name email")
+      .populate("book", "title author")
+      .populate("library", "name city")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: borrows.length,
+      borrows,
+    });
+
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
+  }
+};
+
 // @desc    Issue a Book
 // @route   POST /api/borrow
 // @access  Private (Admin/Librarian)
