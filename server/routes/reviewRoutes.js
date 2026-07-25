@@ -20,4 +20,10 @@ router.get(
   getBookReviews
 );
 
+router.get(
+  "/my-reviews",
+  protect,
+  getMyReviews
+);
+
 export default router;

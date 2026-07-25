@@ -107,3 +107,16 @@ export const getBookReviews = async (req, res) => {
     });
   }
 };
+
+export const getMyReviews = async (req, res) => {
+  try {
+
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
+  }
+};
