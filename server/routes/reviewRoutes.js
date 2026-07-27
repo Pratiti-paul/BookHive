@@ -4,6 +4,7 @@ import {
   getBookReviews,
   getMyReviews,
   updateReview,
+  deleteReview,
 } from "../controllers/reviewController.js";
 import { protect, authorize } from "../middleware/authMiddleware.js";
 
@@ -33,6 +34,13 @@ router.put(
   protect,
   authorize("student"),
   updateReview
+);
+
+router.delete(
+  "/:id",
+  protect,
+  authorize("student"),
+  deleteReview
 );
 
 export default router;
