@@ -72,3 +72,36 @@ export const getMyWishlist = async (req, res) => {
     });
   }
 };
+
+export const removeFromWishlist = async (req, res) => {
+  try {
+    const { bookId } = req.params;
+
+    const wishlist = await Wishlist.findOne({
+      student: req.user._id,
+      book: bookId,
+    });
+
+    if (!wishlist) {
+      return res.status(404).json({
+        success: false,
+        message: "Book not found in wishlist.",
+      });
+    }
+
+    await wishlist.deleteOne();
+
+    res.status(200).json({
+      success: true,
+      message: "Book removed from wishlist successfully.",
+    });
+
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
+  }
+};

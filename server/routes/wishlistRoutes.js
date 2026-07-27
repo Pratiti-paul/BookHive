@@ -2,6 +2,7 @@ import express from "express";
 import {
   addToWishlist,
   getMyWishlist,
+  removeFromWishlist,
 } from "../controllers/wishlistController.js";
 import { protect, authorize } from "../middleware/authMiddleware.js";
 
@@ -26,6 +27,13 @@ router.post(
   protect,
   authorize("student"),
   addToWishlist
+);
+
+router.delete(
+  "/:bookId",
+  protect,
+  authorize("student"),
+  removeFromWishlist
 );
 
 export default router;
