@@ -2,6 +2,8 @@ import express from "express";
 import {
   createReview,
   getBookReviews,
+  getMyReviews,
+  updateReview,
 } from "../controllers/reviewController.js";
 import { protect, authorize } from "../middleware/authMiddleware.js";
 
@@ -24,6 +26,13 @@ router.get(
   "/my-reviews",
   protect,
   getMyReviews
+);
+
+router.put(
+  "/:id",
+  protect,
+  authorize("student"),
+  updateReview
 );
 
 export default router;
