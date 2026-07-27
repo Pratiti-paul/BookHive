@@ -46,3 +46,29 @@ export const addToWishlist = async (req, res) => {
     });
   }
 };
+
+export const getMyWishlist = async (req, res) => {
+  try {
+    const wishlist = await Wishlist.find({
+      student: req.user._id,
+    })
+      .populate(
+        "book",
+        "title author coverImage category availableCopies totalCopies"
+      )
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: wishlist.length,
+      wishlist,
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
+  }
+};
