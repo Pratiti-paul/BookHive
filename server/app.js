@@ -6,6 +6,7 @@ import libraryRoutes from "./routes/libraryRoutes.js";
 import borrowRoutes from "./routes/borrowRoutes.js";
 import reviewRoutes from "./routes/reviewRoutes.js";
 import wishlistRoutes from "./routes/wishlistRoutes.js";
+import seatBookingRoutes from "./routes/seatBookingRoutes.js";
 
 const app = express();
 
@@ -20,6 +21,7 @@ app.use("/api/libraries", libraryRoutes);
 app.use("/api/borrow", borrowRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/wishlist", wishlistRoutes);
+app.use("/api/seat-bookings", seatBookingRoutes);
 
 // Test Route
 app.get("/", (req, res) => {
