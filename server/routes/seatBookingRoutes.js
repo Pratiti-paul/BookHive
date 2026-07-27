@@ -1,6 +1,6 @@
 import express from "express";
 import { bookSeat } from "../controllers/seatBookingController.js";
-import { protect, authorize } from "../middlewares/authMiddleware.js";
+import { protect, authorize } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
