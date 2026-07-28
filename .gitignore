@@ -1,23 +1,16 @@
-# Dependencies
 node_modules/
 **/node_modules/
 
-# Environment
 .env
 **/.env
 
-# Build
 dist/
 build/
 
-# Logs
 *.log
 
-# macOS
 .DS_Store
 
-# VS Code
 .vscode/
 
-# Uploads
 server/uploads/
