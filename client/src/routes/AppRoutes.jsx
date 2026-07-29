@@ -6,6 +6,8 @@ import Register from "../pages/Register/Register.jsx";
 import Unauthorized from "../pages/Unauthorized.jsx";
 import RoleRoute from "./RoleRoute";
 import StudentDashboard from "../pages/student/StudentDashboard.jsx";
+import Books from "../pages/Books/Books.jsx";
+import BookDetails from "../pages/BookDetails/BookDetails.jsx";
 import LibrarianDashboard from "../pages/librarian/LibrarianDashboard.jsx";
 import AdminDashboard from "../pages/Admin/AdminDashboard.jsx";
 
@@ -19,6 +21,24 @@ function AppRoutes() {
       <Route path="/" element={<Home />} />
 
       {/* Protected */}
+
+      <Route
+        path="/books"
+        element={
+          <RoleRoute allowedRoles={["student", "librarian", "admin"]}>
+            <Books />
+          </RoleRoute>
+        }
+      />
+
+      <Route
+        path="/books/:id"
+        element={
+          <RoleRoute allowedRoles={["student", "librarian", "admin"]}>
+            <BookDetails />
+          </RoleRoute>
+        }
+      />
 
         <Route
       path="/student/dashboard"
