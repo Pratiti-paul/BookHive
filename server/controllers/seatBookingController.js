@@ -1,5 +1,6 @@
 import SeatBooking from "../models/SeatBooking.js";
 import Library from "../models/Library.js";
+import createNotification from "../utils/createNotification.js";
 
 export const bookSeat = async (req, res) => {
   try {
@@ -59,6 +60,32 @@ export const bookSeat = async (req, res) => {
       startTime,
       endTime,
     });
+
+    // Notify student about the booking
+    try {
+      await createNotification({
+        recipient: req.user._id,
+        title: "Seat Booked",
+        message: `Your seat has been booked successfully at ${library.name} from ${startTime} to ${endTime}.`,
+        type: "SeatBooking",
+      });
+    } catch (notifyErr) {
+      console.error("Notification (seat book - student) error:", notifyErr?.message || notifyErr);
+    }
+
+    // Notify librarian if assigned
+    try {
+      if (library.librarian) {
+        await createNotification({
+          recipient: library.librarian,
+          title: "New Seat Booking",
+          message: "A new seat booking has been made for your library.",
+          type: "SeatBooking",
+        });
+      }
+    } catch (notifyErr) {
+      console.error("Notification (seat book - librarian) error:", notifyErr?.message || notifyErr);
+    }
 
     res.status(201).json({
       success: true,
@@ -138,6 +165,21 @@ export const cancelBooking = async (req, res) => {
     booking.status = "Cancelled";
 
     await booking.save();
+
+    // Notify student about cancellation
+    try {
+      const lib = await Library.findById(booking.library);
+      const libraryName = lib ? lib.name : "the library";
+
+      await createNotification({
+        recipient: booking.student,
+        title: "Seat Booking Cancelled",
+        message: `Your seat booking at ${libraryName} has been cancelled successfully.`,
+        type: "SeatBooking",
+      });
+    } catch (notifyErr) {
+      console.error("Notification (cancel booking) error:", notifyErr?.message || notifyErr);
+    }
 
     res.status(200).json({
       success: true,

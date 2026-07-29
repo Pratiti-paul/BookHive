@@ -1,5 +1,6 @@
 import Wishlist from "../models/Wishlist.js";
 import Book from "../models/Book.js";
+import createNotification from "../utils/createNotification.js";
 
 export const addToWishlist = async (req, res) => {
   try {
@@ -30,6 +31,18 @@ export const addToWishlist = async (req, res) => {
       student: req.user._id,
       book: bookId,
     });
+
+    // Notify student about wishlist update
+    try {
+      await createNotification({
+        recipient: req.user._id,
+        title: "Wishlist Updated",
+        message: `"${book.title}" has been added to your wishlist.`,
+        type: "Wishlist",
+      });
+    } catch (notifyErr) {
+      console.error("Notification (wishlist add) error:", notifyErr?.message || notifyErr);
+    }
 
     res.status(201).json({
       success: true,
@@ -89,7 +102,22 @@ export const removeFromWishlist = async (req, res) => {
       });
     }
 
+    // Fetch book title for notification
+    const book = await Book.findById(bookId);
+
     await wishlist.deleteOne();
+
+    // Notify student about wishlist removal
+    try {
+      await createNotification({
+        recipient: req.user._id,
+        title: "Wishlist Updated",
+        message: `"${book ? book.title : "The book"}" has been removed from your wishlist.`,
+        type: "Wishlist",
+      });
+    } catch (notifyErr) {
+      console.error("Notification (wishlist remove) error:", notifyErr?.message || notifyErr);
+    }
 
     res.status(200).json({
       success: true,

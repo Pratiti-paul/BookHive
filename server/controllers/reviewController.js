@@ -1,6 +1,7 @@
 import Review from "../models/Review.js";
 import Book from "../models/Book.js";
 import Borrow from "../models/Borrow.js";
+import createNotification from "../utils/createNotification.js";
 
 // Create a review (students only)
 export const createReview = async (req, res) => {
@@ -61,6 +62,18 @@ export const createReview = async (req, res) => {
       rating,
       comment,
     });
+
+    // Notify student about successful review submission
+    try {
+      await createNotification({
+        recipient: req.user._id,
+        title: "Review Submitted",
+        message: `Thank you for reviewing "${book.title}".`,
+        type: "Review",
+      });
+    } catch (notifyErr) {
+      console.error("Notification (review) error:", notifyErr?.message || notifyErr);
+    }
 
     res.status(201).json({
       success: true,
