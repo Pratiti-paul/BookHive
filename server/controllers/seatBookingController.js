@@ -74,3 +74,83 @@ export const bookSeat = async (req, res) => {
     });
   }
 };
+
+export const getMyBookings = async (req, res) => {
+  try {
+    const bookings = await SeatBooking.find({
+      student: req.user._id,
+    })
+      .populate(
+        "library",
+        "name address city state"
+      )
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: bookings.length,
+      bookings,
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
+  }
+};
+
+export const cancelBooking = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const booking = await SeatBooking.findById(id);
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found.",
+      });
+    }
+
+    if (booking.student.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not authorized to cancel this booking.",
+      });
+    }
+
+    if (booking.status === "Cancelled") {
+      return res.status(400).json({
+        success: false,
+        message: "Booking is already cancelled.",
+      });
+    }
+
+    if (booking.status === "Completed") {
+      return res.status(400).json({
+        success: false,
+        message: "Completed bookings cannot be cancelled.",
+      });
+    }
+
+    booking.status = "Cancelled";
+
+    await booking.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Booking cancelled successfully.",
+      booking,
+    });
+
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
+  }
+};
