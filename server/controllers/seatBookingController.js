@@ -154,3 +154,88 @@ export const cancelBooking = async (req, res) => {
     });
   }
 };
+
+export const getLibraryBookings = async (req, res) => {
+  try {
+    const libraryId = req.user.library;
+
+    if (!libraryId) {
+      return res.status(400).json({
+        success: false,
+        message: "No library assigned to this librarian.",
+      });
+    }
+
+    const bookings = await SeatBooking.find({
+      library: libraryId,
+    })
+      .populate("student", "name email")
+      .populate("library", "name city")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: bookings.length,
+      bookings,
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
+  }
+};
+
+export const getAllBookings = async (req, res) => {
+  try {
+    const {
+      library,
+      status,
+      date,
+      page = 1,
+      limit = 10,
+    } = req.query;
+
+    const filter = {};
+
+    if (library) {
+      filter.library = library;
+    }
+
+    if (status) {
+      filter.status = status;
+    }
+
+    if (date) {
+      filter.date = new Date(date);
+    }
+
+    const skip = (page - 1) * limit;
+
+    const bookings = await SeatBooking.find(filter)
+      .populate("student", "name email")
+      .populate("library", "name city")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(Number(limit));
+
+    const total = await SeatBooking.countDocuments(filter);
+
+    res.status(200).json({
+      success: true,
+      total,
+      page: Number(page),
+      pages: Math.ceil(total / limit),
+      bookings,
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
+  }
+};

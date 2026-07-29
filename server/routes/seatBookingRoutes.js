@@ -3,6 +3,8 @@ import {
   bookSeat,
   getMyBookings,
   cancelBooking,
+  getLibraryBookings,
+  getAllBookings,
 } from "../controllers/seatBookingController.js";
 import { protect, authorize } from "../middleware/authMiddleware.js";
 
@@ -27,6 +29,20 @@ router.patch(
   protect,
   authorize("student"),
   cancelBooking
+);
+
+router.get(
+    "/library",
+    protect,
+    authorize("librarian"),
+    getLibraryBookings
+);
+
+router.get(
+  "/",
+  protect,
+  authorize("admin"),
+  getAllBookings
 );
 
 export default router;
