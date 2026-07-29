@@ -8,6 +8,8 @@ import RoleRoute from "./RoleRoute";
 import StudentDashboard from "../pages/student/StudentDashboard.jsx";
 import Books from "../pages/Books/Books.jsx";
 import BookDetails from "../pages/BookDetails/BookDetails.jsx";
+import MyBorrowedBooks from "../pages/BorrowedBooks/MyBorrowedBooks.jsx";
+import Wishlist from "../pages/Wishlist/Wishlist.jsx";
 import LibrarianDashboard from "../pages/librarian/LibrarianDashboard.jsx";
 import AdminDashboard from "../pages/Admin/AdminDashboard.jsx";
 
@@ -36,6 +38,24 @@ function AppRoutes() {
         element={
           <RoleRoute allowedRoles={["student", "librarian", "admin"]}>
             <BookDetails />
+          </RoleRoute>
+        }
+      />
+
+      <Route
+        path="/my-books"
+        element={
+          <RoleRoute allowedRoles={["student"]}>
+            <MyBorrowedBooks />
+          </RoleRoute>
+        }
+      />
+
+      <Route
+        path="/wishlist"
+        element={
+          <RoleRoute allowedRoles={["student"]}>
+            <Wishlist />
           </RoleRoute>
         }
       />

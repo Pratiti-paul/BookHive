@@ -38,3 +38,8 @@ export async function addToWishlist(bookId) {
   const response = await api.post(`/wishlist/${bookId}`);
   return response.data;
 }
+
+export async function removeFromWishlist(bookId) {
+  const response = await api.delete(`/wishlist/${bookId}`);
+  return response.data;
+}
