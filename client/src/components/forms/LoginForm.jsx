@@ -32,7 +32,13 @@ function LoginForm() {
 
       toast.success(response.message);
 
-      navigate("/");
+      const dashboardRoutes = {
+        student: "/student/dashboard",
+        librarian: "/librarian/dashboard",
+        admin: "/admin/dashboard",
+      };
+
+      navigate(dashboardRoutes[response.user.role] || "/", { replace: true });
     } catch (error) {
       toast.error(
         error.response?.data?.message || "Login failed"
