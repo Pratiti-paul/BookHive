@@ -1,1 +1,42 @@
 @import "tailwindcss";
+
+/* BookHive's warm library colour system. These overrides preserve the existing
+   component structure while replacing the former cool SaaS tones. */
+@layer utilities {
+  body {
+    background-color: #FFFDF7;
+    color: #1F2937;
+  }
+
+  .bg-slate-50 { background-color: #FFFDF7; }
+  .bg-slate-100 { background-color: #FFF8E7; }
+  .border-slate-100,
+  .border-slate-200 { border-color: #F3E8C8; }
+  .text-slate-950,
+  .text-slate-900 { color: #1F2937; }
+  .hover\:bg-slate-50:hover,
+  .hover\:bg-slate-100:hover { background-color: #FFF6D9; }
+
+  .bg-violet-50 { background-color: #FFF8E7; }
+  .bg-violet-100 { background-color: #FFF0BD; }
+  .border-violet-100 { border-color: #F3E8C8; }
+  .border-violet-200 { border-color: #EACD7D; }
+  .border-violet-300 { border-color: #F4B400; }
+  .text-violet-100 { color: #FFFDF7; }
+  .text-violet-700 { color: #9A5B00; }
+  .text-violet-800 { color: #7A4700; }
+  .text-violet-800\/70 { color: rgb(122 71 0 / 0.7); }
+  .text-violet-900 { color: #1F2937; }
+  .bg-violet-700 { background-color: #F4B400; }
+  .bg-violet-800 { background-color: #925800; }
+  .bg-violet-700.text-white { color: #1F2937; }
+  .hover\:bg-violet-700:hover { background-color: #F4B400; }
+  .hover\:bg-violet-800:hover { background-color: #925800; }
+  .hover\:text-violet-700:hover { color: #7A4700; }
+  .focus-within\:ring-violet-100:focus-within { --tw-ring-color: #FFF0BD; }
+  .shadow-violet-100\/40 { --tw-shadow-color: rgb(244 180 0 / 0.2); }
+
+  .bg-amber-400 { background-color: #FFCC33; }
+  .hover\:bg-amber-300:hover { background-color: #FFD966; }
+  .bg-yellow-50 { background-color: #FFFDF7; }
+}

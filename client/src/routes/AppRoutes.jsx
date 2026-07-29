@@ -4,7 +4,6 @@ import Home from "../pages/Home/Home.jsx";
 import Login from "../pages/Login/Login.jsx";
 import Register from "../pages/Register/Register.jsx";
 import Unauthorized from "../pages/Unauthorized.jsx";
-import ProtectedRoute from "./ProtectedRoute";
 import RoleRoute from "./RoleRoute";
 import StudentDashboard from "../pages/student/StudentDashboard.jsx";
 import LibrarianDashboard from "../pages/librarian/LibrarianDashboard.jsx";
@@ -17,15 +16,9 @@ function AppRoutes() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
 
+      <Route path="/" element={<Home />} />
+
       {/* Protected */}
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <Home />
-          </ProtectedRoute>
-        }
-      />
 
         <Route
       path="/student/dashboard"
