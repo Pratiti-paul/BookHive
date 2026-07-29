@@ -2,6 +2,7 @@ import Borrow from "../models/Borrow.js";
 import Book from "../models/Book.js";
 import User from "../models/User.js";
 import Library from "../models/Library.js";
+import createNotification from "../utils/createNotification.js";
 
 
 // @desc    Return a Book
@@ -57,24 +58,33 @@ export const returnBook = async (req, res) => {
     const returnDate = borrow.returnDate;
 
     if (returnDate > dueDate) {
-    const overdueDays = Math.ceil(
-        (returnDate - dueDate) / (1000 * 60 * 60 * 24)
-    );
-
-    borrow.fine = overdueDays * 10; // £10 per day (or ₹10 if you later choose to localize)
+      const overdueDays = Math.ceil((returnDate - dueDate) / (1000 * 60 * 60 * 24));
+      borrow.fine = overdueDays * 10; // £10 per day
     } else {
-    borrow.fine = 0;
+      borrow.fine = 0;
     }
 
     borrow.status = "returned";
 
     await borrow.save();
 
+    // Notify student about the return
+    try {
+      await createNotification({
+        recipient: borrow.student,
+        title: "Book Returned",
+        message: `You have successfully returned "${book.title}".`,
+        type: "Borrow",
+      });
+    } catch (notifyErr) {
+      console.error("Notification (return) error:", notifyErr?.message || notifyErr);
+    }
+
     res.status(200).json({
-        success: true,
-        message: "Book returned successfully.",
-        fine: borrow.fine,
-        borrow,
+      success: true,
+      message: "Book returned successfully.",
+      fine: borrow.fine,
+      borrow,
     });
 
   } catch (error) {
@@ -126,6 +136,21 @@ export const renewBook = async (req, res) => {
     borrow.renewCount += 1;
 
     await borrow.save();
+
+    // Notify student about the renewal
+    try {
+      const renewedBook = await Book.findById(borrow.book);
+      const bookTitle = renewedBook ? renewedBook.title : "the book";
+
+      await createNotification({
+        recipient: borrow.student,
+        title: "Book Renewed",
+        message: `Your borrowing period for "${bookTitle}" has been renewed.`,
+        type: "Borrow",
+      });
+    } catch (notifyErr) {
+      console.error("Notification (renew) error:", notifyErr?.message || notifyErr);
+    }
 
     res.status(200).json({
       success: true,
@@ -326,6 +351,19 @@ export const issueBook = async (req, res) => {
     }
 
     await book.save();
+
+    // Send notification to the student about the successful issue
+    try {
+      await createNotification({
+        recipient: student._id,
+        title: "Book Issued",
+        message: `You have successfully borrowed "${book.title}".`,
+        type: "Borrow",
+      });
+    } catch (notifyErr) {
+      // createNotification already handles errors, but guard just in case
+      console.error("Notification (issue) error:", notifyErr?.message || notifyErr);
+    }
 
     res.status(201).json({
       success: true,
