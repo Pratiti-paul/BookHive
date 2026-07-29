@@ -24,6 +24,11 @@ export async function getBookById(bookId) {
   return response.data;
 }
 
+export async function getBookReviews(bookId) {
+  const response = await api.get(`/reviews/book/${bookId}`);
+  return response.data;
+}
+
 export async function getWishlist() {
   const response = await api.get("/wishlist");
   return response.data;
