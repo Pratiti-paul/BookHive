@@ -6,7 +6,32 @@ import BookCover from "../dashboard/BookCover";
 function BookCard({ book, libraryName, isWishlisted, onWishlist }) {
   const isAvailable = book.availableCopies > 0 && book.status === "available";
 
-  return <motion.article initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col rounded-xl border border-[#F3E8C8] bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"><BookCover book={book} /><div className="mt-4 flex min-w-0 flex-1 flex-col"><div><div className="flex items-start justify-between gap-3"><h2 className="truncate font-semibold text-[#1F2937]">{book.title}</h2>{book.rating ? <span className="flex shrink-0 items-center gap-1 text-xs font-semibold text-gray-600"><Star size={13} className="fill-[#FFCC33] text-[#FFCC33]" />{book.rating}</span> : <span className="text-xs text-gray-400">Not rated</span>}</div><p className="mt-1 truncate text-sm text-gray-500">{book.author}</p><div className="mt-3 flex flex-wrap gap-2"><span className="rounded-full bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800">{book.category}</span>{libraryName && <span className="truncate rounded-full bg-gray-100 px-2 py-1 text-[11px] text-gray-600">{libraryName}</span>}</div></div><div className="mt-4"><p className={`text-xs font-medium ${isAvailable ? "text-emerald-700" : "text-red-700"}`}>{isAvailable ? `${book.availableCopies} ${book.availableCopies === 1 ? "copy" : "copies"} available` : "Currently unavailable"}</p><div className="mt-4 grid grid-cols-3 gap-2"><Link to={`/books/${book._id}`} className="col-span-1 inline-flex items-center justify-center rounded-lg border border-[#F3E8C8] px-2 py-2 text-xs font-semibold text-gray-700 transition hover:bg-amber-50" aria-label={`View details for ${book.title}`}><BookOpen size={16} /></Link><button type="button" onClick={() => onWishlist(book._id)} disabled={isWishlisted} className="inline-flex items-center justify-center rounded-lg border border-[#F3E8C8] px-2 py-2 text-xs font-semibold text-amber-800 transition hover:bg-amber-50 disabled:cursor-default disabled:bg-amber-50 disabled:text-amber-700" aria-label={`Add ${book.title} to wishlist`}><Heart size={16} className={isWishlisted ? "fill-current" : ""} /></button><button type="button" disabled title="Books are issued by library staff." className="rounded-lg bg-[#F4B400] px-2 py-2 text-xs font-semibold text-[#1F2937] opacity-60" aria-label={`Borrow ${book.title}`}>Borrow</button></div></div></div></motion.article>;
+  return <motion.article initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col rounded-xl border border-[#F3E8C8] bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+    <BookCover book={book} />
+    <div className="mt-4 flex min-w-0 flex-1 flex-col">
+      <div>
+        <div className="flex items-start justify-between gap-3">
+          <h2 className="truncate font-semibold text-[#1F2937]">{book.title}</h2>
+          {book.rating ? <span className="flex shrink-0 items-center gap-1 text-xs font-semibold text-gray-600"><Star size={13} className="fill-[#FFCC33] text-[#FFCC33]" />{book.rating}</span> : <span className="text-xs text-gray-400">Not rated</span>}
+        </div>
+        <p className="mt-1 truncate text-sm text-gray-500">{book.author}</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <span className="rounded-full bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800">{book.category}</span>
+          {libraryName && <span className="truncate rounded-full bg-gray-100 px-2 py-1 text-[11px] text-gray-600">{libraryName}</span>}
+        </div>
+      </div>
+      <div className="mt-4">
+        <p className={`text-xs font-medium ${isAvailable ? "text-emerald-700" : "text-red-700"}`}>{isAvailable ? `${book.availableCopies} ${book.availableCopies === 1 ? "copy" : "copies"} available` : "Currently unavailable"}</p>
+        <div className="mt-4 grid grid-cols-1 gap-2">
+          <Link to={`/books/${book._id}`} className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-[#F3E8C8] px-2 py-2 text-xs font-semibold text-gray-700 transition hover:bg-amber-50"><BookOpen size={15} />View Details</Link>
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" onClick={() => onWishlist(book._id)} disabled={isWishlisted} className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-[#F3E8C8] px-2 py-2 text-xs font-semibold text-amber-800 transition hover:bg-amber-50 disabled:cursor-default disabled:bg-amber-50 disabled:text-amber-700"><Heart size={15} className={isWishlisted ? "fill-current" : ""} />{isWishlisted ? "Saved" : "Wishlist"}</button>
+            <button type="button" disabled title="Books are issued by library staff." className="rounded-lg bg-[#F4B400] px-2 py-2 text-xs font-semibold text-[#1F2937] opacity-60">Borrow</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </motion.article>;
 }
 
 export default BookCard;
