@@ -16,7 +16,6 @@ const bookSchema = new mongoose.Schema(
 
     isbn: {
       type: String,
-      unique: true,
       required: true,
       trim: true,
     },
@@ -83,5 +82,8 @@ const bookSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+// Compound index to ensure ISBN uniqueness is scoped per library
+bookSchema.index({ isbn: 1, library: 1 }, { unique: true });
 
 export default mongoose.model("Book", bookSchema);

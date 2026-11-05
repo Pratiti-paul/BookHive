@@ -4,7 +4,6 @@ import User from "../models/User.js";
 import Library from "../models/Library.js";
 import createNotification from "../utils/createNotification.js";
 
-
 // @desc    Return a Book
 // @route   PUT /api/borrow/:borrowId/return
 // @access  Private (Admin/Librarian)
@@ -19,6 +18,29 @@ export const returnBook = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "Borrow record not found.",
+      });
+    }
+
+    // Multi-tenancy library authorization check
+    if (req.user.role === "librarian") {
+      if (!req.user.library) {
+        return res.status(403).json({
+          success: false,
+          message: "No library assigned to this librarian.",
+        });
+      }
+
+      if (borrow.library.toString() !== req.user.library.toString()) {
+        return res.status(403).json({
+          success: false,
+          message:
+            "You don't have permission to return books for another library.",
+        });
+      }
+    } else if (req.user.role !== "admin") {
+      return res.status(403).json({
+        success: false,
+        message: "You don't have permission to return books.",
       });
     }
 
@@ -53,13 +75,15 @@ export const returnBook = async (req, res) => {
     // Set return date
     borrow.returnDate = new Date();
 
-    // Calculate fine
+    // Calculate fine (£/₹ 10 per overdue day)
     const dueDate = new Date(borrow.dueDate);
     const returnDate = borrow.returnDate;
 
     if (returnDate > dueDate) {
-      const overdueDays = Math.ceil((returnDate - dueDate) / (1000 * 60 * 60 * 24));
-      borrow.fine = overdueDays * 10; // £10 per day
+      const overdueDays = Math.ceil(
+        (returnDate - dueDate) / (1000 * 60 * 60 * 24)
+      );
+      borrow.fine = overdueDays * 10;
     } else {
       borrow.fine = 0;
     }
@@ -77,7 +101,10 @@ export const returnBook = async (req, res) => {
         type: "Borrow",
       });
     } catch (notifyErr) {
-      console.error("Notification (return) error:", notifyErr?.message || notifyErr);
+      console.error(
+        "Notification (return) error:",
+        notifyErr?.message || notifyErr
+      );
     }
 
     res.status(200).json({
@@ -86,7 +113,6 @@ export const returnBook = async (req, res) => {
       fine: borrow.fine,
       borrow,
     });
-
   } catch (error) {
     console.error(error);
 
@@ -97,7 +123,6 @@ export const returnBook = async (req, res) => {
     });
   }
 };
-
 
 // @desc    Renew a Book
 // @route   PUT /api/borrow/:borrowId/renew
@@ -112,6 +137,29 @@ export const renewBook = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "Borrow record not found.",
+      });
+    }
+
+    // Multi-tenancy library authorization check
+    if (req.user.role === "librarian") {
+      if (!req.user.library) {
+        return res.status(403).json({
+          success: false,
+          message: "No library assigned to this librarian.",
+        });
+      }
+
+      if (borrow.library.toString() !== req.user.library.toString()) {
+        return res.status(403).json({
+          success: false,
+          message:
+            "You don't have permission to renew books for another library.",
+        });
+      }
+    } else if (req.user.role !== "admin") {
+      return res.status(403).json({
+        success: false,
+        message: "You don't have permission to renew books.",
       });
     }
 
@@ -149,7 +197,10 @@ export const renewBook = async (req, res) => {
         type: "Borrow",
       });
     } catch (notifyErr) {
-      console.error("Notification (renew) error:", notifyErr?.message || notifyErr);
+      console.error(
+        "Notification (renew) error:",
+        notifyErr?.message || notifyErr
+      );
     }
 
     res.status(200).json({
@@ -157,7 +208,6 @@ export const renewBook = async (req, res) => {
       message: "Book renewed successfully.",
       borrow,
     });
-
   } catch (error) {
     console.error(error);
 
@@ -178,7 +228,7 @@ export const getMyBorrowedBooks = async (req, res) => {
       student: req.user._id,
     })
       .populate("book")
-      .populate("library", "name city")
+      .populate("library", "name city address")
       .sort({ createdAt: -1 });
 
     res.status(200).json({
@@ -186,7 +236,6 @@ export const getMyBorrowedBooks = async (req, res) => {
       count: borrows.length,
       borrows,
     });
-
   } catch (error) {
     console.error(error);
 
@@ -197,14 +246,36 @@ export const getMyBorrowedBooks = async (req, res) => {
   }
 };
 
-// @desc    Get all borrow records
+// @desc    Get all borrow records (scoped to librarian's library; all for admin)
 // @route   GET /api/borrow
 // @access  Private (Admin/Librarian)
 export const getAllBorrowRecords = async (req, res) => {
   try {
-    const borrows = await Borrow.find()
+    const query = {};
+
+    if (req.user.role === "librarian") {
+      if (!req.user.library) {
+        return res.status(403).json({
+          success: false,
+          message: "No library assigned to this librarian.",
+        });
+      }
+
+      query.library = req.user.library;
+    } else if (req.user.role === "admin") {
+      if (req.query.library) {
+        query.library = req.query.library;
+      }
+    } else {
+      return res.status(403).json({
+        success: false,
+        message: "You don't have permission to access borrow records.",
+      });
+    }
+
+    const borrows = await Borrow.find(query)
       .populate("student", "name email")
-      .populate("book", "title author")
+      .populate("book", "title author isbn")
       .populate("library", "name city")
       .sort({ createdAt: -1 });
 
@@ -213,7 +284,6 @@ export const getAllBorrowRecords = async (req, res) => {
       count: borrows.length,
       borrows,
     });
-
   } catch (error) {
     console.error(error);
 
@@ -224,20 +294,42 @@ export const getAllBorrowRecords = async (req, res) => {
   }
 };
 
-// @desc    Get overdue books
+// @desc    Get overdue books (scoped to librarian's library; all for admin)
 // @route   GET /api/borrow/overdue
 // @access  Private (Admin/Librarian)
 export const getOverdueBooks = async (req, res) => {
   try {
     const today = new Date();
 
-    const borrows = await Borrow.find({
+    const query = {
       dueDate: { $lt: today },
       status: "borrowed",
-    })
+    };
+
+    if (req.user.role === "librarian") {
+      if (!req.user.library) {
+        return res.status(403).json({
+          success: false,
+          message: "No library assigned to this librarian.",
+        });
+      }
+
+      query.library = req.user.library;
+    } else if (req.user.role === "admin") {
+      if (req.query.library) {
+        query.library = req.query.library;
+      }
+    } else {
+      return res.status(403).json({
+        success: false,
+        message: "You don't have permission to access overdue records.",
+      });
+    }
+
+    const borrows = await Borrow.find(query)
       .populate("student", "name email")
-      .populate("book", "title author")
-      .populate("library", "name");
+      .populate("book", "title author isbn")
+      .populate("library", "name city");
 
     res.status(200).json({
       success: true,
@@ -260,13 +352,44 @@ export const getOverdueBooks = async (req, res) => {
 export const issueBook = async (req, res) => {
   try {
     const { studentId, bookId } = req.body;
-    const libraryId = req.body.library || req.body.libraryId;
+    const requestedLibraryId = req.body.library || req.body.libraryId;
 
     // Validate required fields
-    if (!studentId || !bookId || !libraryId) {
+    if (!studentId || !bookId) {
       return res.status(400).json({
         success: false,
-        message: "Student, Book and Library are required.",
+        message: "Student and Book are required.",
+      });
+    }
+
+    // Determine target library based on role
+    let targetLibraryId;
+
+    if (req.user.role === "librarian") {
+      if (!req.user.library) {
+        return res.status(403).json({
+          success: false,
+          message: "No library assigned to this librarian.",
+        });
+      }
+
+      if (
+        requestedLibraryId &&
+        requestedLibraryId.toString() !== req.user.library.toString()
+      ) {
+        return res.status(403).json({
+          success: false,
+          message: "You can only issue books for your assigned library.",
+        });
+      }
+
+      targetLibraryId = req.user.library;
+    } else if (req.user.role === "admin") {
+      targetLibraryId = requestedLibraryId;
+    } else {
+      return res.status(403).json({
+        success: false,
+        message: "You don't have permission to issue books.",
       });
     }
 
@@ -290,8 +413,13 @@ export const issueBook = async (req, res) => {
       });
     }
 
-    // Check library
-    const libraryDoc = await Library.findById(libraryId);
+    // If targetLibraryId was not explicitly set for admin, infer from book
+    if (!targetLibraryId) {
+      targetLibraryId = book.library;
+    }
+
+    // Check library existence
+    const libraryDoc = await Library.findById(targetLibraryId);
 
     if (!libraryDoc) {
       return res.status(404).json({
@@ -308,7 +436,18 @@ export const issueBook = async (req, res) => {
       });
     }
 
-    // Check if student already borrowed this book
+    // If user is a librarian, verify the book belongs to their library
+    if (
+      req.user.role === "librarian" &&
+      book.library.toString() !== req.user.library.toString()
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "You cannot issue books belonging to another library.",
+      });
+    }
+
+    // Check if student already borrowed this book and has not returned it
     const existingBorrow = await Borrow.findOne({
       student: student._id,
       book: book._id,
@@ -318,7 +457,7 @@ export const issueBook = async (req, res) => {
     if (existingBorrow) {
       return res.status(400).json({
         success: false,
-        message: "Student already has this book.",
+        message: "Student has already borrowed this book.",
       });
     }
 
@@ -361,14 +500,21 @@ export const issueBook = async (req, res) => {
         type: "Borrow",
       });
     } catch (notifyErr) {
-      // createNotification already handles errors, but guard just in case
-      console.error("Notification (issue) error:", notifyErr?.message || notifyErr);
+      console.error(
+        "Notification (issue) error:",
+        notifyErr?.message || notifyErr
+      );
     }
+
+    const populatedBorrow = await Borrow.findById(borrow._id)
+      .populate("student", "name email")
+      .populate("book", "title author isbn")
+      .populate("library", "name city");
 
     res.status(201).json({
       success: true,
       message: "Book issued successfully.",
-      borrow,
+      borrow: populatedBorrow,
     });
   } catch (error) {
     console.error(error);
