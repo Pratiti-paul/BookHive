@@ -22,13 +22,6 @@ router.get(
   getMyWishlist
 );
 
-router.post(
-  "/:bookId",
-  protect,
-  authorize("student"),
-  addToWishlist
-);
-
 router.delete(
   "/:bookId",
   protect,
