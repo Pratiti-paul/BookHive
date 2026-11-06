@@ -7,6 +7,7 @@ import borrowRoutes from "./routes/borrowRoutes.js";
 import reviewRoutes from "./routes/reviewRoutes.js";
 import wishlistRoutes from "./routes/wishlistRoutes.js";
 import seatBookingRoutes from "./routes/seatBookingRoutes.js";
+import seatRoutes from "./routes/seatRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
 
@@ -60,6 +61,7 @@ app.use("/api/borrow", borrowRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/seat-bookings", seatBookingRoutes);
+app.use("/api/seats", seatRoutes);
 app.use("/api/notifications", notificationRoutes);
 
 // Test Route
