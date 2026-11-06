@@ -3,7 +3,36 @@ import Book from "../models/Book.js";
 import Borrow from "../models/Borrow.js";
 import createNotification from "../utils/createNotification.js";
 
-// Create a review (students only)
+/**
+ * Recalculate and update the average rating and total reviews for a book.
+ * Handles books with zero reviews cleanly.
+ */
+export const updateBookRatingStats = async (bookId) => {
+  try {
+    const reviews = await Review.find({ book: bookId });
+    const totalReviews = reviews.length;
+    let rating = 0;
+
+    if (totalReviews > 0) {
+      const sum = reviews.reduce((total, rev) => total + (Number(rev.rating) || 0), 0);
+      rating = Math.round((sum / totalReviews) * 10) / 10;
+    }
+
+    await Book.findByIdAndUpdate(bookId, {
+      rating,
+      totalReviews,
+    });
+
+    return { rating, totalReviews };
+  } catch (err) {
+    console.error("Error updating book rating stats:", err?.message || err);
+    return { rating: 0, totalReviews: 0 };
+  }
+};
+
+// @desc    Create a review (students only)
+// @route   POST /api/reviews
+// @access  Private (Student)
 export const createReview = async (req, res) => {
   try {
     const { bookId, rating, comment } = req.body;
@@ -15,7 +44,8 @@ export const createReview = async (req, res) => {
       });
     }
 
-    if (rating < 1 || rating > 5) {
+    const numRating = Number(rating);
+    if (isNaN(numRating) || numRating < 1 || numRating > 5) {
       return res.status(400).json({
         success: false,
         message: "Rating must be between 1 and 5.",
@@ -30,20 +60,24 @@ export const createReview = async (req, res) => {
       });
     }
 
-    // Ensure the user has borrowed the book at least once
+    // Ensure the student has borrowed the book
     const hasBorrowed = await Borrow.findOne({
       student: req.user._id,
       book: bookId,
     });
 
-    if (!hasBorrowed) {
+    if (
+      !hasBorrowed ||
+      hasBorrowed.status === "pending" ||
+      hasBorrowed.status === "rejected"
+    ) {
       return res.status(403).json({
         success: false,
         message: "You can only review books that you have borrowed.",
       });
     }
 
-    // Prevent duplicate reviews from same student
+    // Prevent duplicate reviews from the same student
     const existingReview = await Review.findOne({
       student: req.user._id,
       book: bookId,
@@ -59,9 +93,12 @@ export const createReview = async (req, res) => {
     const review = await Review.create({
       student: req.user._id,
       book: bookId,
-      rating,
-      comment,
+      rating: numRating,
+      comment: typeof comment === "string" ? comment.trim() : "",
     });
+
+    // Update book rating stats
+    const stats = await updateBookRatingStats(bookId);
 
     // Notify student about successful review submission
     try {
@@ -75,12 +112,23 @@ export const createReview = async (req, res) => {
       console.error("Notification (review) error:", notifyErr?.message || notifyErr);
     }
 
+    const populatedReview = await Review.findById(review._id)
+      .populate("student", "name email")
+      .populate("book", "title author coverImage rating totalReviews");
+
     res.status(201).json({
       success: true,
       message: "Review added successfully.",
-      review,
+      review: populatedReview || review,
+      bookStats: stats,
     });
   } catch (error) {
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: "You have already reviewed this book.",
+      });
+    }
     console.error(error);
     res.status(500).json({
       success: false,
@@ -90,7 +138,9 @@ export const createReview = async (req, res) => {
   }
 };
 
-// Get all reviews for a book
+// @desc    Get all reviews for a book
+// @route   GET /api/reviews/book/:bookId
+// @access  Private
 export const getBookReviews = async (req, res) => {
   try {
     const { bookId } = req.params;
@@ -104,7 +154,7 @@ export const getBookReviews = async (req, res) => {
     }
 
     const reviews = await Review.find({ book: bookId })
-      .populate("student", "name")
+      .populate("student", "name email")
       .sort({ createdAt: -1 });
 
     res.status(200).json({
@@ -121,32 +171,55 @@ export const getBookReviews = async (req, res) => {
   }
 };
 
+// @desc    Get logged-in student's own reviews
+// @route   GET /api/reviews/my-reviews
+// @access  Private (Student)
 export const getMyReviews = async (req, res) => {
   try {
+    const rawReviews = await Review.find({
+      student: req.user._id,
+    })
+      .populate(
+        "book",
+        "title author coverImage isbn category rating totalReviews"
+      )
+      .sort({ createdAt: -1 });
 
+    // Safely filter out reviews whose referenced book was removed
+    const reviews = rawReviews.filter((item) => item.book != null);
+
+    res.status(200).json({
+      success: true,
+      count: reviews.length,
+      reviews,
+    });
   } catch (error) {
     console.error(error);
-
     res.status(500).json({
       success: false,
       message: "Server Error",
+      error: error.message,
     });
   }
 };
 
+// @desc    Update a review
+// @route   PUT /api/reviews/:id
+// @access  Private (Student)
 export const updateReview = async (req, res) => {
   try {
     const { id } = req.params;
     const { rating, comment } = req.body;
 
-    if (!rating) {
+    if (rating == null) {
       return res.status(400).json({
         success: false,
         message: "Rating is required.",
       });
     }
 
-    if (rating < 1 || rating > 5) {
+    const numRating = Number(rating);
+    if (isNaN(numRating) || numRating < 1 || numRating > 5) {
       return res.status(400).json({
         success: false,
         message: "Rating must be between 1 and 5.",
@@ -169,28 +242,46 @@ export const updateReview = async (req, res) => {
       });
     }
 
-    review.rating = rating;
-    review.comment = comment;
+    review.rating = numRating;
+    if (comment !== undefined) {
+      review.comment = typeof comment === "string" ? comment.trim() : "";
+    }
 
     await review.save();
+
+    // Recalculate book rating stats
+    const stats = await updateBookRatingStats(review.book);
+
+    let populatedReview = null;
+    try {
+      if (typeof Review.findById(review._id)?.populate === "function") {
+        populatedReview = await Review.findById(review._id)
+          .populate("student", "name email")
+          .populate("book", "title author coverImage rating totalReviews");
+      }
+    } catch {
+      populatedReview = review;
+    }
 
     res.status(200).json({
       success: true,
       message: "Review updated successfully.",
-      review,
+      review: populatedReview || review,
+      bookStats: stats,
     });
-
   } catch (error) {
     console.error(error);
-
     res.status(500).json({
       success: false,
       message: "Server Error",
+      error: error.message,
     });
   }
 };
 
-
+// @desc    Delete a review
+// @route   DELETE /api/reviews/:id
+// @access  Private (Student)
 export const deleteReview = async (req, res) => {
   try {
     const { id } = req.params;
@@ -211,19 +302,23 @@ export const deleteReview = async (req, res) => {
       });
     }
 
+    const targetBookId = review.book;
     await review.deleteOne();
+
+    // Recalculate book rating stats (handles zero reviews remaining)
+    const stats = await updateBookRatingStats(targetBookId);
 
     res.status(200).json({
       success: true,
       message: "Review deleted successfully.",
+      bookStats: stats,
     });
-
   } catch (error) {
     console.error(error);
-
     res.status(500).json({
       success: false,
       message: "Server Error",
+      error: error.message,
     });
   }
 };

@@ -62,14 +62,17 @@ export const addToWishlist = async (req, res) => {
 
 export const getMyWishlist = async (req, res) => {
   try {
-    const wishlist = await Wishlist.find({
+    const rawWishlist = await Wishlist.find({
       student: req.user._id,
     })
       .populate(
         "book",
-        "title author coverImage category availableCopies totalCopies"
+        "title author coverImage category availableCopies totalCopies status"
       )
       .sort({ createdAt: -1 });
+
+    // Safely filter out references where the book was deleted from the catalogue
+    const wishlist = rawWishlist.filter((item) => item.book != null);
 
     res.status(200).json({
       success: true,

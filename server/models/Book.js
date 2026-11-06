@@ -77,6 +77,19 @@ const bookSchema = new mongoose.Schema(
       enum: ["available", "unavailable"],
       default: "available",
     },
+
+    rating: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 5,
+    },
+
+    totalReviews: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
   },
   {
     timestamps: true,
