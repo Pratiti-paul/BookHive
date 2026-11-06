@@ -41,6 +41,11 @@ const seatSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+
+    reservationVersion: {
+      type: Number,
+      default: 0,
+    },
   },
   {
     timestamps: true,

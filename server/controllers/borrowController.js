@@ -721,8 +721,8 @@ export const returnBook = async (req, res) => {
     const returnDate = borrow.returnDate;
 
     if (returnDate > dueDate) {
-      const overdueDays = Math.ceil((returnDate - dueDate) / (1000 * 60 * 60 * 24));
-      borrow.fine = overdueDays * 10;
+      const overdueDays = Math.round((returnDate - dueDate) / (1000 * 60 * 60 * 24));
+      borrow.fine = Math.max(overdueDays, 1) * 10;
     } else {
       borrow.fine = 0;
     }
