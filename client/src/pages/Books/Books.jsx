@@ -5,7 +5,9 @@ import DashboardLayout from "../../layouts/DashboardLayout";
 import PageContainer from "../../components/common/PageContainer";
 import BookCard from "../../components/Books/BookCard";
 import FilterBar from "../../components/Books/FilterBar";
+import useAuth from "../../hooks/useAuth";
 import { addToWishlist, getBooks, getLibraries, getWishlist } from "../../services/booksService";
+import { getMyBorrowedBooks, requestBorrow } from "../../services/borrowService";
 
 const PAGE_SIZE = 12;
 const INITIAL_FILTERS = { search: "", category: "", library: "", availability: "all", sort: "-createdAt" };
@@ -15,10 +17,13 @@ function BookGridSkeleton() {
 }
 
 function Books() {
+  const { user } = useAuth();
   const [books, setBooks] = useState([]);
   const [libraries, setLibraries] = useState([]);
   const [categories, setCategories] = useState([]);
   const [wishlistedIds, setWishlistedIds] = useState(new Set());
+  const [borrowStatusMap, setBorrowStatusMap] = useState(new Map());
+  const [borrowingId, setBorrowingId] = useState(null);
   const [filters, setFilters] = useState(INITIAL_FILTERS);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -28,35 +33,58 @@ function Books() {
 
   const loadFilterData = useCallback(async () => {
     try {
-      const [libraryData, wishlistData, categoryData] = await Promise.all([getLibraries(), getWishlist(), getBooks({ limit: 100, sort: "title" })]);
+      const calls = [getLibraries(), getBooks({ limit: 100, sort: "title" })];
+      if (user) {
+        calls.push(getWishlist());
+        calls.push(getMyBorrowedBooks());
+      }
+
+      const results = await Promise.allSettled(calls);
+      const libraryData = results[0].status === "fulfilled" ? results[0].value : {};
+      const categoryData = results[1].status === "fulfilled" ? results[1].value : {};
+      const wishlistData = user && results[2]?.status === "fulfilled" ? results[2].value : {};
+      const borrowData = user && results[3]?.status === "fulfilled" ? results[3].value : {};
+
       setLibraries(libraryData.libraries || []);
-      setWishlistedIds(new Set((wishlistData.wishlist || []).map((item) => item.book?._id || item.book)));
       setCategories([...new Set((categoryData.books || []).map((book) => book.category).filter(Boolean))].sort());
+
+      if (wishlistData.wishlist) {
+        setWishlistedIds(new Set(wishlistData.wishlist.map((item) => item.book?._id || item.book)));
+      }
+
+      if (borrowData.borrows) {
+        const statusMap = new Map();
+        borrowData.borrows.forEach((item) => {
+          const bId = item.book?._id || item.book;
+          if (item.status === "borrowed" || item.status === "pending") {
+            statusMap.set(bId.toString(), item.status);
+          }
+        });
+        setBorrowStatusMap(statusMap);
+      }
     } catch {
-      // The primary catalogue request shows a retryable error if required data is unavailable.
+      // Non-critical background data
     }
-  }, []);
+  }, [user]);
 
   const loadBooks = useCallback(async () => {
     setIsLoading(true);
     setError("");
     try {
-      const params = { search: filters.search || undefined, category: filters.category || undefined, status: filters.availability === "all" ? undefined : filters.availability, sort: filters.sort };
-      if (filters.library) {
-        const response = await getBooks({ ...params, page: 1, limit: 100 });
-        const libraryBooks = (response.books || []).filter((book) => (book.library?._id || book.library) === filters.library);
-        const libraryTotalPages = Math.max(1, Math.ceil(libraryBooks.length / PAGE_SIZE));
-        const activePage = Math.min(page, libraryTotalPages);
-        setBooks(libraryBooks.slice((activePage - 1) * PAGE_SIZE, activePage * PAGE_SIZE));
-        setTotalBooks(libraryBooks.length);
-        setTotalPages(libraryTotalPages);
-        if (activePage !== page) setPage(activePage);
-      } else {
-        const response = await getBooks({ ...params, page, limit: PAGE_SIZE });
-        setBooks(response.books || []);
-        setTotalBooks(response.totalBooks || 0);
-        setTotalPages(response.totalPages || 1);
-      }
+      const params = {
+        search: filters.search || undefined,
+        category: filters.category || undefined,
+        library: filters.library || undefined,
+        status: filters.availability === "all" ? undefined : filters.availability,
+        sort: filters.sort,
+        page,
+        limit: PAGE_SIZE,
+      };
+
+      const response = await getBooks(params);
+      setBooks(response.books || []);
+      setTotalBooks(response.totalBooks || 0);
+      setTotalPages(response.totalPages || 1);
     } catch (requestError) {
       setError(requestError.response?.data?.message || "We couldn’t load the book catalogue. Please try again.");
     } finally {
@@ -71,6 +99,7 @@ function Books() {
   const hasFilters = Object.entries(filters).some(([key, value]) => key === "availability" ? value !== "all" : key === "sort" ? value !== "-createdAt" : Boolean(value));
   const updateFilters = (nextFilters) => { setFilters(nextFilters); setPage(1); };
   const clearFilters = () => { setFilters(INITIAL_FILTERS); setPage(1); };
+
   const handleWishlist = async (bookId) => {
     try {
       await addToWishlist(bookId);
@@ -81,7 +110,20 @@ function Books() {
     }
   };
 
-  return <DashboardLayout><PageContainer><section className="border-b border-[#F3E8C8] pb-8"><p className="text-sm font-medium text-amber-700">Discover your next read</p><h1 className="mt-1 text-3xl font-bold tracking-tight text-[#1F2937] sm:text-4xl">Browse Books</h1><p className="mt-2 text-gray-500">Search the live catalogue across BookHive libraries.</p></section><div className="mt-7"><FilterBar filters={filters} categories={categories} libraries={libraries} onChange={updateFilters} /></div><div className="mt-7 flex items-center justify-between gap-4"><p className="text-sm text-gray-500">{isLoading ? "Loading catalogue…" : `${totalBooks} book${totalBooks === 1 ? "" : "s"} found`}</p><div className="flex items-center gap-3"><SlidersHorizontal size={17} className="text-gray-500" />{hasFilters && <button type="button" onClick={clearFilters} className="inline-flex items-center gap-1 text-sm font-semibold text-amber-700 hover:text-amber-800"><X size={15} />Clear filters</button>}</div></div><section className="mt-4">{isLoading ? <BookGridSkeleton /> : error ? <div className="rounded-xl border border-red-100 bg-white px-6 py-14 text-center"><AlertCircle className="mx-auto text-red-600" size={28} /><h2 className="mt-3 font-semibold text-[#1F2937]">Catalogue unavailable</h2><p className="mt-2 text-sm text-gray-500">{error}</p><button type="button" onClick={loadBooks} className="mt-5 rounded-lg bg-[#F4B400] px-4 py-2.5 text-sm font-semibold text-[#1F2937] hover:bg-[#F59E0B]">Try again</button></div> : books.length === 0 ? <div className="rounded-xl border border-dashed border-[#F3E8C8] bg-white px-6 py-14 text-center"><BookOpen className="mx-auto text-amber-600" size={28} /><h2 className="mt-3 font-semibold text-[#1F2937]">No books found</h2><p className="mt-2 text-sm text-gray-500">Try adjusting your search or filters.</p>{hasFilters && <button type="button" onClick={clearFilters} className="mt-5 text-sm font-semibold text-amber-700">Clear all filters</button>}</div> : <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{books.map((book) => <BookCard key={book._id} book={book} libraryName={libraryNames.get(book.library?._id || book.library)} isWishlisted={wishlistedIds.has(book._id)} onWishlist={handleWishlist} />)}</div>}</section>{!isLoading && !error && totalPages > 1 && <nav className="mt-8 flex items-center justify-center gap-2" aria-label="Books pagination"><button type="button" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={page === 1} className="rounded-lg border border-[#F3E8C8] p-2 text-gray-600 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-40" aria-label="Previous page"><ChevronLeft size={18} /></button><span className="px-3 text-sm text-gray-600">Page {page} of {totalPages}</span><button type="button" onClick={() => setPage((current) => Math.min(totalPages, current + 1))} disabled={page === totalPages} className="rounded-lg border border-[#F3E8C8] p-2 text-gray-600 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-40" aria-label="Next page"><ChevronRight size={18} /></button></nav>}</PageContainer></DashboardLayout>;
+  const handleBorrow = async (bookId) => {
+    setBorrowingId(bookId);
+    try {
+      await requestBorrow(bookId);
+      setBorrowStatusMap((prev) => new Map(prev).set(bookId.toString(), "pending"));
+      toast.success("Borrow request submitted! Awaiting librarian approval.");
+    } catch (requestError) {
+      toast.error(requestError.response?.data?.message || "Unable to submit borrow request.");
+    } finally {
+      setBorrowingId(null);
+    }
+  };
+
+  return <DashboardLayout><PageContainer><section className="border-b border-[#F3E8C8] pb-8"><p className="text-sm font-medium text-amber-700">Discover your next read</p><h1 className="mt-1 text-3xl font-bold tracking-tight text-[#1F2937] sm:text-4xl">Browse Books</h1><p className="mt-2 text-gray-500">Search the live catalogue across BookHive libraries.</p></section><div className="mt-7"><FilterBar filters={filters} categories={categories} libraries={libraries} onChange={updateFilters} /></div><div className="mt-7 flex items-center justify-between gap-4"><p className="text-sm text-gray-500">{isLoading ? "Loading catalogue…" : `${totalBooks} book${totalBooks === 1 ? "" : "s"} found`}</p><div className="flex items-center gap-3"><SlidersHorizontal size={17} className="text-gray-500" />{hasFilters && <button type="button" onClick={clearFilters} className="inline-flex items-center gap-1 text-sm font-semibold text-amber-700 hover:text-amber-800"><X size={15} />Clear filters</button>}</div></div><section className="mt-4">{isLoading ? <BookGridSkeleton /> : error ? <div className="rounded-xl border border-red-100 bg-white px-6 py-14 text-center"><AlertCircle className="mx-auto text-red-600" size={28} /><h2 className="mt-3 font-semibold text-[#1F2937]">Catalogue unavailable</h2><p className="mt-2 text-sm text-gray-500">{error}</p><button type="button" onClick={loadBooks} className="mt-5 rounded-lg bg-[#F4B400] px-4 py-2.5 text-sm font-semibold text-[#1F2937] hover:bg-[#F59E0B]">Try again</button></div> : books.length === 0 ? <div className="rounded-xl border border-dashed border-[#F3E8C8] bg-white px-6 py-14 text-center"><BookOpen className="mx-auto text-amber-600" size={28} /><h2 className="mt-3 font-semibold text-[#1F2937]">No books found</h2><p className="mt-2 text-sm text-gray-500">Try adjusting your search or filters.</p>{hasFilters && <button type="button" onClick={clearFilters} className="mt-5 text-sm font-semibold text-amber-700">Clear all filters</button>}</div> : <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{books.map((book) => <BookCard key={book._id} book={book} libraryName={libraryNames.get(book.library?._id || book.library)} isWishlisted={wishlistedIds.has(book._id)} onWishlist={handleWishlist} borrowStatus={borrowStatusMap.get(book._id?.toString())} onBorrow={user?.role === "student" ? handleBorrow : undefined} isBorrowing={borrowingId === book._id} />)}</div>}</section>{!isLoading && !error && totalPages > 1 && <nav className="mt-8 flex items-center justify-center gap-2" aria-label="Books pagination"><button type="button" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={page === 1} className="rounded-lg border border-[#F3E8C8] p-2 text-gray-600 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-40" aria-label="Previous page"><ChevronLeft size={18} /></button><span className="px-3 text-sm text-gray-600">Page {page} of {totalPages}</span><button type="button" onClick={() => setPage((current) => Math.min(totalPages, current + 1))} disabled={page === totalPages} className="rounded-lg border border-[#F3E8C8] p-2 text-gray-600 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-40" aria-label="Next page"><ChevronRight size={18} /></button></nav>}</PageContainer></DashboardLayout>;
 }
 
 export default Books;

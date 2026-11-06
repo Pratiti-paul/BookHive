@@ -20,14 +20,19 @@ const borrowSchema = new mongoose.Schema(
       required: true,
     },
 
-    issueDate: {
+    requestDate: {
       type: Date,
       default: Date.now,
     },
 
+    issueDate: {
+      type: Date,
+      default: null,
+    },
+
     dueDate: {
       type: Date,
-      required: true,
+      default: null,
     },
 
     returnDate: {
@@ -35,10 +40,26 @@ const borrowSchema = new mongoose.Schema(
       default: null,
     },
 
+    actionDate: {
+      type: Date,
+      default: null,
+    },
+
     status: {
       type: String,
-      enum: ["borrowed", "returned", "overdue"],
-      default: "borrowed",
+      enum: ["pending", "borrowed", "returned", "overdue", "rejected"],
+      default: "pending",
+    },
+
+    rejectionReason: {
+      type: String,
+      default: "",
+    },
+
+    reviewedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
     },
 
     fine: {
@@ -47,14 +68,30 @@ const borrowSchema = new mongoose.Schema(
     },
 
     renewCount: {
-    type: Number,
-    default: 0,
-  },
+      type: Number,
+      default: 0,
+    },
+
+    renewalStatus: {
+      type: String,
+      enum: ["none", "pending", "approved", "rejected"],
+      default: "none",
+    },
+
+    renewalRejectionReason: {
+      type: String,
+      default: "",
+    },
   },
   {
     timestamps: true,
   }
 );
+
+// Compound indexes for fast lookups
+borrowSchema.index({ student: 1, status: 1 });
+borrowSchema.index({ library: 1, status: 1 });
+borrowSchema.index({ book: 1, status: 1 });
 
 const Borrow = mongoose.model("Borrow", borrowSchema);
 

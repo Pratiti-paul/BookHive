@@ -3,8 +3,74 @@ import { BookOpen, Heart, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 import BookCover from "../dashboard/BookCover";
 
-function BookCard({ book, libraryName, isWishlisted, onWishlist }) {
+function BookCard({
+  book,
+  libraryName,
+  isWishlisted,
+  onWishlist,
+  borrowStatus,
+  onBorrow,
+  isBorrowing = false,
+}) {
   const isAvailable = book.availableCopies > 0 && book.status === "available";
+
+  const renderBorrowButton = () => {
+    if (borrowStatus === "pending") {
+      return (
+        <span
+          className="inline-flex items-center justify-center rounded-lg bg-amber-100 px-2 py-2 text-xs font-semibold text-amber-800"
+          title="Your borrow request is pending librarian approval."
+        >
+          Requested
+        </span>
+      );
+    }
+
+    if (borrowStatus === "borrowed") {
+      return (
+        <span
+          className="inline-flex items-center justify-center rounded-lg bg-emerald-100 px-2 py-2 text-xs font-semibold text-emerald-800"
+          title="You currently have this book borrowed."
+        >
+          Borrowed
+        </span>
+      );
+    }
+
+    if (!isAvailable) {
+      return (
+        <button
+          type="button"
+          disabled
+          className="cursor-not-allowed rounded-lg bg-gray-100 px-2 py-2 text-xs font-semibold text-gray-400"
+        >
+          Unavailable
+        </button>
+      );
+    }
+
+    if (onBorrow) {
+      return (
+        <button
+          type="button"
+          onClick={() => onBorrow(book._id)}
+          disabled={isBorrowing}
+          className="rounded-lg bg-[#F4B400] px-2 py-2 text-xs font-semibold text-[#1F2937] transition hover:bg-[#F59E0B] disabled:opacity-50"
+        >
+          {isBorrowing ? "Requesting…" : "Borrow"}
+        </button>
+      );
+    }
+
+    return (
+      <Link
+        to={`/books/${book._id}`}
+        className="inline-flex items-center justify-center rounded-lg bg-[#F4B400] px-2 py-2 text-xs font-semibold text-[#1F2937] transition hover:bg-[#F59E0B]"
+      >
+        Borrow
+      </Link>
+    );
+  };
 
   return <motion.article initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col rounded-xl border border-[#F3E8C8] bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
     <BookCover book={book} />
@@ -26,7 +92,7 @@ function BookCard({ book, libraryName, isWishlisted, onWishlist }) {
           <Link to={`/books/${book._id}`} className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-[#F3E8C8] px-2 py-2 text-xs font-semibold text-gray-700 transition hover:bg-amber-50"><BookOpen size={15} />View Details</Link>
           <div className="grid grid-cols-2 gap-2">
             <button type="button" onClick={() => onWishlist(book._id)} disabled={isWishlisted} className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-[#F3E8C8] px-2 py-2 text-xs font-semibold text-amber-800 transition hover:bg-amber-50 disabled:cursor-default disabled:bg-amber-50 disabled:text-amber-700"><Heart size={15} className={isWishlisted ? "fill-current" : ""} />{isWishlisted ? "Saved" : "Wishlist"}</button>
-            <button type="button" disabled title="Books are issued by library staff." className="rounded-lg bg-[#F4B400] px-2 py-2 text-xs font-semibold text-[#1F2937] opacity-60">Borrow</button>
+            {renderBorrowButton()}
           </div>
         </div>
       </div>

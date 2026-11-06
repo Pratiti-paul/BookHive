@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, BookOpen, Heart, LibraryBig, Sparkles, Star } from "lucide-react";
+import { ArrowLeft, BookOpen, Check, Clock, Heart, LibraryBig, Sparkles, Star } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import DashboardLayout from "../../layouts/DashboardLayout";
 import PageContainer from "../../components/common/PageContainer";
 import BookCover from "../../components/dashboard/BookCover";
+import useAuth from "../../hooks/useAuth";
 import { addToWishlist, getBookById, getBookReviews, getBooks } from "../../services/booksService";
+import { getMyBorrowedBooks, requestBorrow } from "../../services/borrowService";
 
 const formatDate = (value) => value ? new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric" }).format(new Date(value)) : "";
 
@@ -19,9 +21,12 @@ function DetailSkeleton() {
 
 function BookDetails() {
   const { id } = useParams();
+  const { user } = useAuth();
   const [book, setBook] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [relatedBooks, setRelatedBooks] = useState([]);
+  const [borrowStatus, setBorrowStatus] = useState(null);
+  const [isBorrowing, setIsBorrowing] = useState(false);
   const [errors, setErrors] = useState({ book: "", reviews: "", related: "" });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -32,27 +37,60 @@ function BookDetails() {
       const bookData = await getBookById(id);
       setBook(bookData.book);
 
-      const [reviewsResult, relatedResult] = await Promise.allSettled([
+      const asyncCalls = [
         getBookReviews(id),
         getBooks({ category: bookData.book.category, limit: 8, sort: "-createdAt" }),
-      ]);
+      ];
+
+      if (user) {
+        asyncCalls.push(getMyBorrowedBooks());
+      }
+
+      const results = await Promise.allSettled(asyncCalls);
+      const reviewsResult = results[0];
+      const relatedResult = results[1];
+      const borrowResult = user ? results[2] : null;
 
       if (reviewsResult.status === "fulfilled") setReviews(reviewsResult.value.reviews || []);
       else setErrors((current) => ({ ...current, reviews: reviewsResult.reason.response?.data?.message || "Reviews could not be loaded." }));
 
       if (relatedResult.status === "fulfilled") setRelatedBooks((relatedResult.value.books || []).filter((item) => item._id !== id).slice(0, 4));
       else setErrors((current) => ({ ...current, related: relatedResult.reason.response?.data?.message || "Related books could not be loaded." }));
+
+      if (borrowResult && borrowResult.status === "fulfilled") {
+        const borrows = borrowResult.value.borrows || [];
+        const activeBorrow = borrows.find((b) => (b.book?._id || b.book) === id && (b.status === "pending" || b.status === "borrowed"));
+        if (activeBorrow) {
+          setBorrowStatus(activeBorrow.status);
+        } else {
+          setBorrowStatus(null);
+        }
+      }
     } catch (requestError) {
       setErrors((current) => ({ ...current, book: requestError.response?.data?.message || "Unable to load this book." }));
     } finally {
       setIsLoading(false);
     }
-  }, [id]);
+  }, [id, user]);
 
   useEffect(() => { loadBook(); }, [loadBook]);
 
   const saveToWishlist = async () => {
     try { await addToWishlist(book._id); toast.success("Book added to your wishlist."); } catch (requestError) { toast.error(requestError.response?.data?.message || "Unable to update your wishlist."); }
+  };
+
+  const handleBorrow = async () => {
+    if (!book) return;
+    setIsBorrowing(true);
+    try {
+      await requestBorrow(book._id);
+      setBorrowStatus("pending");
+      toast.success("Borrow request submitted! Awaiting librarian approval.");
+    } catch (requestError) {
+      toast.error(requestError.response?.data?.message || "Unable to submit borrow request.");
+    } finally {
+      setIsBorrowing(false);
+    }
   };
 
   const averageRating = useMemo(() => reviews.length ? reviews.reduce((total, review) => total + review.rating, 0) / reviews.length : null, [reviews]);
@@ -67,7 +105,34 @@ function BookDetails() {
 
   return <DashboardLayout><PageContainer>
     <Link to="/books" className="inline-flex items-center gap-2 text-sm font-semibold text-amber-700 hover:text-amber-800"><ArrowLeft size={17} />Back to books</Link>
-    <article className="mt-6 grid gap-8 rounded-xl border border-[#F3E8C8] bg-white p-5 shadow-sm sm:p-8 md:grid-cols-[240px_1fr]"><BookCover book={book} /><div><span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800">{book.category}</span><h1 className="mt-4 text-3xl font-bold tracking-tight text-[#1F2937]">{book.title}</h1><p className="mt-2 text-lg text-gray-500">{book.author}</p><div className="mt-5 flex items-center gap-3">{averageRating ? <><RatingStars value={averageRating} /><span className="text-sm font-semibold text-[#1F2937]">{averageRating.toFixed(1)}</span><span className="text-sm text-gray-500">({reviews.length} review{reviews.length === 1 ? "" : "s"})</span></> : <span className="text-sm text-gray-500">Not rated yet</span>}</div><p className="mt-6 leading-7 text-gray-600">{book.description || "No description is available for this book."}</p><div className="mt-7 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">{details.map(([label, value]) => <div key={label} className="rounded-lg bg-[#FFFDF7] p-3"><p className="text-gray-500">{label}</p><p className="mt-1 break-words font-semibold text-[#1F2937]">{value}</p></div>)}<div className="rounded-lg bg-[#FFFDF7] p-3"><p className="text-gray-500">Available copies</p><p className={`mt-1 font-semibold ${available ? "text-emerald-700" : "text-red-700"}`}>{copyLabel}</p></div></div><div className="mt-7 flex flex-wrap gap-3"><button type="button" disabled title="Books are issued by library staff." className="inline-flex items-center gap-2 rounded-lg bg-[#F4B400] px-4 py-2.5 text-sm font-semibold text-[#1F2937] opacity-60"><LibraryBig size={17} />Borrow</button><button type="button" onClick={saveToWishlist} className="inline-flex items-center gap-2 rounded-lg border border-[#F3E8C8] px-4 py-2.5 text-sm font-semibold text-amber-800 transition hover:bg-amber-50"><Heart size={17} />Wishlist</button></div></div></article>
+    <article className="mt-6 grid gap-8 rounded-xl border border-[#F3E8C8] bg-white p-5 shadow-sm sm:p-8 md:grid-cols-[240px_1fr]"><BookCover book={book} /><div><span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800">{book.category}</span><h1 className="mt-4 text-3xl font-bold tracking-tight text-[#1F2937]">{book.title}</h1><p className="mt-2 text-lg text-gray-500">{book.author}</p><div className="mt-5 flex items-center gap-3">{averageRating ? <><RatingStars value={averageRating} /><span className="text-sm font-semibold text-[#1F2937]">{averageRating.toFixed(1)}</span><span className="text-sm text-gray-500">({reviews.length} review{reviews.length === 1 ? "" : "s"})</span></> : <span className="text-sm text-gray-500">Not rated yet</span>}</div><p className="mt-6 leading-7 text-gray-600">{book.description || "No description is available for this book."}</p><div className="mt-7 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">{details.map(([label, value]) => <div key={label} className="rounded-lg bg-[#FFFDF7] p-3"><p className="text-gray-500">{label}</p><p className="mt-1 break-words font-semibold text-[#1F2937]">{value}</p></div>)}<div className="rounded-lg bg-[#FFFDF7] p-3"><p className="text-gray-500">Available copies</p><p className={`mt-1 font-semibold ${available ? "text-emerald-700" : "text-red-700"}`}>{copyLabel}</p></div></div>          <div className="mt-7 flex flex-wrap gap-3">
+            {borrowStatus === "pending" ? (
+              <span className="inline-flex items-center gap-2 rounded-lg bg-amber-100 px-4 py-2.5 text-sm font-semibold text-amber-800" title="Your borrow request is pending librarian approval.">
+                <Clock size={17} />Requested
+              </span>
+            ) : borrowStatus === "borrowed" ? (
+              <span className="inline-flex items-center gap-2 rounded-lg bg-emerald-100 px-4 py-2.5 text-sm font-semibold text-emerald-800" title="You currently have this book borrowed.">
+                <Check size={17} />Borrowed
+              </span>
+            ) : !available ? (
+              <button type="button" disabled className="inline-flex items-center gap-2 rounded-lg bg-gray-100 px-4 py-2.5 text-sm font-semibold text-gray-400 cursor-not-allowed">
+                <LibraryBig size={17} />Unavailable
+              </button>
+            ) : user?.role === "student" ? (
+              <button type="button" onClick={handleBorrow} disabled={isBorrowing} className="inline-flex items-center gap-2 rounded-lg bg-[#F4B400] px-4 py-2.5 text-sm font-semibold text-[#1F2937] transition hover:bg-[#F59E0B] disabled:opacity-50">
+                <LibraryBig size={17} />{isBorrowing ? "Requesting…" : "Request to Borrow"}
+              </button>
+            ) : (
+              <button type="button" disabled title="Only student accounts can request to borrow books." className="inline-flex items-center gap-2 rounded-lg bg-[#F4B400] px-4 py-2.5 text-sm font-semibold text-[#1F2937] opacity-60">
+                <LibraryBig size={17} />Borrow
+              </button>
+            )}
+            <button type="button" onClick={saveToWishlist} className="inline-flex items-center gap-2 rounded-lg border border-[#F3E8C8] px-4 py-2.5 text-sm font-semibold text-amber-800 transition hover:bg-amber-50">
+              <Heart size={17} />Wishlist
+            </button>
+          </div>
+        </div>
+      </article>
 
     <section className="mt-8 rounded-xl border border-amber-200 bg-amber-50 p-5"><div className="flex gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#FFCC33] text-[#1F2937]"><Sparkles size={19} /></span><div><h2 className="font-semibold text-[#1F2937]">AI Summary</h2><p className="mt-1 text-sm leading-6 text-gray-600">AI summaries will be available here soon. Check back for a concise overview of this book.</p></div></div></section>
 
