@@ -1,4 +1,4 @@
-import { Bell, BookOpen, Building2, CalendarDays, ChartLine, ChevronLeft, Heart, LayoutDashboard, LibraryBig, LogOut, Settings, Users } from "lucide-react";
+import { Armchair, Bell, BookOpen, Building2, CalendarDays, ChartLine, ChevronLeft, Heart, LayoutDashboard, LibraryBig, LogOut, Settings, Users } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import useAuth from "../../hooks/useAuth";
 
@@ -7,10 +7,10 @@ const navigation = {
     ["Dashboard", "/student/dashboard", LayoutDashboard], ["Browse Books", "/books", BookOpen], ["Borrowed Books", "/my-books", LibraryBig], ["Wishlist", "/wishlist", Heart], ["Seat Booking", "/seat-booking", CalendarDays], ["Notifications", "/notifications", Bell], ["Profile", "/profile", Users],
   ],
   librarian: [
-    ["Dashboard", "/librarian/dashboard", LayoutDashboard], ["Manage Books", "/books", BookOpen], ["Borrow Requests", "/borrow-requests", LibraryBig], ["Seat Booking", "/seat-booking", CalendarDays], ["Students", "/students", Users], ["Profile", "/profile", Users],
+    ["Dashboard", "/librarian/dashboard", LayoutDashboard], ["Manage Books", "/books", BookOpen], ["Borrow Requests", "/borrow-requests", LibraryBig], ["Seating Layout", "/librarian/seating", Armchair], ["Students", "/students", Users], ["Profile", "/profile", Users],
   ],
   admin: [
-    ["Dashboard", "/admin/dashboard", LayoutDashboard], ["Libraries", "/libraries", Building2], ["Manage Books", "/books", BookOpen], ["Users", "/users", Users], ["Analytics", "/analytics", ChartLine], ["Settings", "/settings", Settings], ["Profile", "/profile", Users],
+    ["Dashboard", "/admin/dashboard", LayoutDashboard], ["Libraries", "/libraries", Building2], ["Manage Books", "/books", BookOpen], ["Seating Layout", "/librarian/seating", Armchair], ["Users", "/users", Users], ["Analytics", "/analytics", ChartLine], ["Settings", "/settings", Settings], ["Profile", "/profile", Users],
   ],
 };
 

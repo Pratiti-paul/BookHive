@@ -11,6 +11,7 @@ import BookDetails from "../pages/BookDetails/BookDetails.jsx";
 import MyBorrowedBooks from "../pages/BorrowedBooks/MyBorrowedBooks.jsx";
 import Wishlist from "../pages/Wishlist/Wishlist.jsx";
 import LibrarianDashboard from "../pages/librarian/LibrarianDashboard.jsx";
+import LibrarianSeatingLayout from "../pages/librarian/LibrarianSeatingLayout.jsx";
 import AdminDashboard from "../pages/Admin/AdminDashboard.jsx";
 import Profile from "../pages/Profile/Profile.jsx";
 
@@ -75,6 +76,15 @@ function AppRoutes() {
       element={
         <RoleRoute allowedRoles={["librarian"]}>
           <LibrarianDashboard />
+        </RoleRoute>
+      }
+    />
+
+    <Route
+      path="/librarian/seating"
+      element={
+        <RoleRoute allowedRoles={["librarian", "admin"]}>
+          <LibrarianSeatingLayout />
         </RoleRoute>
       }
     />

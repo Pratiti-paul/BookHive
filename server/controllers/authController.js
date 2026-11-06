@@ -66,6 +66,7 @@ export const register = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        library: user.library,
         profileImage: user.profileImage,
       },
     });
@@ -127,6 +128,7 @@ export const login = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        library: user.library,
         profileImage: user.profileImage,
       },
     });
