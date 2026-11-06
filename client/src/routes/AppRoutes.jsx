@@ -12,6 +12,7 @@ import MyBorrowedBooks from "../pages/BorrowedBooks/MyBorrowedBooks.jsx";
 import Wishlist from "../pages/Wishlist/Wishlist.jsx";
 import LibrarianDashboard from "../pages/librarian/LibrarianDashboard.jsx";
 import AdminDashboard from "../pages/Admin/AdminDashboard.jsx";
+import Profile from "../pages/Profile/Profile.jsx";
 
 function AppRoutes() {
   return (
@@ -83,6 +84,15 @@ function AppRoutes() {
       element={
         <RoleRoute allowedRoles={["admin"]}>
           <AdminDashboard />
+        </RoleRoute>
+      }
+    />
+
+    <Route
+      path="/profile"
+      element={
+        <RoleRoute allowedRoles={["student", "librarian", "admin"]}>
+          <Profile />
         </RoleRoute>
       }
     />

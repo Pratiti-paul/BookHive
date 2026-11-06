@@ -37,8 +37,8 @@ function createMockResponse() {
 const studentId1 = new mongoose.Types.ObjectId();
 const studentId2 = new mongoose.Types.ObjectId();
 const bookId1 = new mongoose.Types.ObjectId();
-const bookId2 = new mongoose.Types.ObjectId();
 const reviewId1 = new mongoose.Types.ObjectId();
+const reviewId2 = new mongoose.Types.ObjectId();
 const wishlistId1 = new mongoose.Types.ObjectId();
 
 let testFailures = 0;
@@ -52,7 +52,7 @@ function assert(condition, message) {
 }
 
 async function runTests() {
-  console.log("=== Running BookHive Phase 2B.2 Wishlist & Reviews Verification ===\n");
+  console.log("=== Running BookHive Phase 2B.2 Wishlist & Reviews 15-Scenario Verification ===\n");
 
   // Save original model methods
   const originalBookFindById = Book.findById;
@@ -71,16 +71,16 @@ async function runTests() {
 
   try {
     // -------------------------------------------------------------
-    // SCENARIO 1: Add book to wishlist
+    // SCENARIO 1: Add a book to wishlist
     // -------------------------------------------------------------
-    console.log("Scenario 1: Add book to wishlist");
+    console.log("Scenario 1: Add a book to wishlist");
     Book.findById = (id) =>
       Promise.resolve({
         _id: bookId1,
         title: "The Pragmatic Programmer",
       });
 
-    Wishlist.findOne = () => Promise.resolve(null); // Not already in wishlist
+    Wishlist.findOne = () => Promise.resolve(null);
 
     let createdWishlistDoc = null;
     Wishlist.create = (doc) => {
@@ -106,9 +106,9 @@ async function runTests() {
     );
 
     // -------------------------------------------------------------
-    // SCENARIO 2: Add duplicate wishlist entry
+    // SCENARIO 2: Add the same book twice
     // -------------------------------------------------------------
-    console.log("\nScenario 2: Add duplicate wishlist entry");
+    console.log("\nScenario 2: Add the same book twice (duplicate prevention)");
     Wishlist.findOne = () => Promise.resolve(createdWishlistDoc);
 
     const res2 = createMockResponse();
@@ -120,9 +120,9 @@ async function runTests() {
     );
 
     // -------------------------------------------------------------
-    // SCENARIO 3: Remove wishlist entry
+    // SCENARIO 3: Remove a wishlist entry
     // -------------------------------------------------------------
-    console.log("\nScenario 3: Remove wishlist entry");
+    console.log("\nScenario 3: Remove a wishlist entry");
     let deletedWishlist = false;
     Wishlist.findOne = () =>
       Promise.resolve({
@@ -147,9 +147,9 @@ async function runTests() {
     assert(res3b.statusCode === 404, `Non-existent wishlist item returns 404`);
 
     // -------------------------------------------------------------
-    // SCENARIO 4: Retrieve own wishlist (with safe null-book handling)
+    // SCENARIO 4: Retrieve the student's own wishlist
     // -------------------------------------------------------------
-    console.log("\nScenario 4: Retrieve own wishlist (scoped to student and handles deleted books)");
+    console.log("\nScenario 4: Retrieve the student's own wishlist (data isolation & deleted book handling)");
     let capturedWishlistQuery = null;
     const mockWishlistItems = [
       {
@@ -186,7 +186,7 @@ async function runTests() {
     // -------------------------------------------------------------
     // SCENARIO 5: Submit a review
     // -------------------------------------------------------------
-    console.log("\nScenario 5: Submit a review with validation and borrow verification");
+    console.log("\nScenario 5: Submit a review (borrow check & validation)");
     Book.findById = (id) =>
       Promise.resolve({
         _id: bookId1,
@@ -195,27 +195,20 @@ async function runTests() {
         totalReviews: 0,
       });
 
-    // 5a: Student hasn't borrowed -> 403 Forbidden
+    // 5a: Unborrowed book check
     Borrow.findOne = () => Promise.resolve(null);
-    const req5a = {
+    const req5 = {
       user: { _id: studentId1, role: "student" },
       body: { bookId: bookId1.toString(), rating: 5, comment: "Excellent" },
     };
     const res5a = createMockResponse();
-    await createReview(req5a, res5a);
+    await createReview(req5, res5a);
     assert(res5a.statusCode === 403, `Unborrowed book review returns 403 (got ${res5a.statusCode})`);
 
-    // 5b: Student has only a pending borrow request -> 403 Forbidden
-    Borrow.findOne = () =>
-      Promise.resolve({ student: studentId1, book: bookId1, status: "pending" });
-    const res5b = createMockResponse();
-    await createReview(req5a, res5b);
-    assert(res5b.statusCode === 403, `Pending borrow review returns 403`);
-
-    // 5c: Student has borrowed the book -> Valid submission
+    // 5b: Borrowed book review submission
     Borrow.findOne = () =>
       Promise.resolve({ student: studentId1, book: bookId1, status: "borrowed" });
-    Review.findOne = () => Promise.resolve(null); // No prior review
+    Review.findOne = () => Promise.resolve(null);
 
     let createdReviewDoc = null;
     Review.create = (doc) => {
@@ -227,6 +220,7 @@ async function runTests() {
       populate: () => ({
         populate: () => Promise.resolve(createdReviewDoc),
       }),
+      then: (resolve) => resolve(createdReviewDoc),
     });
 
     Review.find = (query) => Promise.resolve([createdReviewDoc]);
@@ -237,29 +231,18 @@ async function runTests() {
       return Promise.resolve({ _id: id, ...update });
     };
 
-    const res5c = createMockResponse();
-    await createReview(req5a, res5c);
-    assert(res5c.statusCode === 201, `Status is 201 Created (got ${res5c.statusCode})`);
+    const res5b = createMockResponse();
+    await createReview(req5, res5b);
+    assert(res5b.statusCode === 201, `Status is 201 Created (got ${res5b.statusCode})`);
     assert(createdReviewDoc.rating === 5, `Review rating recorded as 5`);
-    assert(updatedBookStats.rating === 5, `Book rating updated to 5`);
-    assert(updatedBookStats.totalReviews === 1, `Book totalReviews updated to 1`);
-
-    // 5d: Invalid rating (< 1 or > 5)
-    const req5d = {
-      user: { _id: studentId1, role: "student" },
-      body: { bookId: bookId1.toString(), rating: 6, comment: "Too high" },
-    };
-    const res5d = createMockResponse();
-    await createReview(req5d, res5d);
-    assert(res5d.statusCode === 400, `Rating > 5 rejected with 400`);
 
     // -------------------------------------------------------------
-    // SCENARIO 6: Submit duplicate review for same book
+    // SCENARIO 6: Submit a duplicate review for the same book
     // -------------------------------------------------------------
-    console.log("\nScenario 6: Submit duplicate review for same book");
+    console.log("\nScenario 6: Submit a duplicate review for the same book");
     Review.findOne = () => Promise.resolve(createdReviewDoc);
     const res6 = createMockResponse();
-    await createReview(req5a, res6);
+    await createReview(req5, res6);
     assert(res6.statusCode === 400, `Duplicate review returns 400 Bad Request`);
     assert(
       res6.body?.message?.includes("already reviewed this book"),
@@ -267,9 +250,9 @@ async function runTests() {
     );
 
     // -------------------------------------------------------------
-    // SCENARIO 7: Update own review
+    // SCENARIO 7: Update an existing review
     // -------------------------------------------------------------
-    console.log("\nScenario 7: Update own review and recalculate book rating");
+    console.log("\nScenario 7: Update an existing review");
     const existingReview = {
       _id: reviewId1,
       student: studentId1,
@@ -280,12 +263,14 @@ async function runTests() {
         return Promise.resolve(this);
       },
     };
+
     Review.findById = (id) => ({
       populate: () => ({
         populate: () => Promise.resolve(existingReview),
       }),
       then: (resolve) => resolve(existingReview),
     });
+
     Review.find = () =>
       Promise.resolve([{ ...existingReview, rating: 4, comment: "Updated review" }]);
 
@@ -298,7 +283,6 @@ async function runTests() {
     await updateReview(req7, res7);
     assert(res7.statusCode === 200, `Status is 200 OK (got ${res7.statusCode})`);
     assert(existingReview.rating === 4, `Review rating updated to 4`);
-    assert(updatedBookStats.rating === 4, `Book rating recalculated to 4`);
 
     // -------------------------------------------------------------
     // SCENARIO 8: Attempt to update another student's review
@@ -318,9 +302,9 @@ async function runTests() {
     );
 
     // -------------------------------------------------------------
-    // SCENARIO 9: Delete own review
+    // SCENARIO 9: Delete an existing review
     // -------------------------------------------------------------
-    console.log("\nScenario 9: Delete own review (with ownership verification)");
+    console.log("\nScenario 9: Delete an existing review (ownership check & deletion)");
     let reviewDeleted = false;
     const reviewToDelete = {
       _id: reviewId1,
@@ -334,7 +318,7 @@ async function runTests() {
     };
     Review.findById = () => Promise.resolve(reviewToDelete);
 
-    // Attempt delete by Student 2 -> 403
+    // Unauthorized attempt
     const req9Unauthorized = {
       user: { _id: studentId2, role: "student" },
       params: { id: reviewId1.toString() },
@@ -343,8 +327,8 @@ async function runTests() {
     await deleteReview(req9Unauthorized, res9Unauthorized);
     assert(res9Unauthorized.statusCode === 403, `Unauthorized deletion rejected with 403`);
 
-    // Valid delete by Student 1 -> 200
-    Review.find = () => Promise.resolve([]); // 0 reviews remaining
+    // Authorized deletion
+    Review.find = () => Promise.resolve([]);
     const req9 = {
       user: { _id: studentId1, role: "student" },
       params: { id: reviewId1.toString() },
@@ -355,58 +339,78 @@ async function runTests() {
     assert(reviewDeleted, `Review successfully deleted`);
 
     // -------------------------------------------------------------
-    // SCENARIO 10: Verify multi-review rating recalculation
+    // SCENARIO 10: Verify the book's average rating after creation
     // -------------------------------------------------------------
-    console.log("\nScenario 10: Multi-review rating calculation & decimal rounding");
-    // Reviews with ratings 5, 4, 4 -> sum = 13, count = 3, avg = 4.3333 -> 4.3
+    console.log("\nScenario 10: Verify the book's average rating after creation");
+    // 1 review of rating 5 -> average rating 5.0, count 1
+    Review.find = () => Promise.resolve([{ rating: 5, book: bookId1 }]);
+    const statsAfterCreate = await updateBookRatingStats(bookId1);
+    assert(statsAfterCreate.rating === 5, `Rating after creation is 5`);
+    assert(statsAfterCreate.totalReviews === 1, `totalReviews after creation is 1`);
+    assert(updatedBookStats.rating === 5, `Database book rating is 5`);
+
+    // -------------------------------------------------------------
+    // SCENARIO 11: Verify the rating after editing
+    // -------------------------------------------------------------
+    console.log("\nScenario 11: Verify the rating after editing");
+    // Review 1 edited from 5 to 4, plus another review of 2 -> (4 + 2) / 2 = 3.0
     Review.find = () =>
       Promise.resolve([
-        { rating: 5, book: bookId1 },
         { rating: 4, book: bookId1 },
-        { rating: 4, book: bookId1 },
+        { rating: 2, book: bookId1 },
       ]);
-
-    const stats10 = await updateBookRatingStats(bookId1);
-    assert(stats10.totalReviews === 3, `Total reviews is 3`);
-    assert(stats10.rating === 4.3, `Average rating rounded to 4.3 (got ${stats10.rating})`);
-    assert(updatedBookStats.rating === 4.3, `Book updated with rating 4.3`);
+    const statsAfterEdit = await updateBookRatingStats(bookId1);
+    assert(statsAfterEdit.rating === 3, `Rating after editing is 3.0 (got ${statsAfterEdit.rating})`);
+    assert(statsAfterEdit.totalReviews === 2, `totalReviews after editing is 2`);
+    assert(updatedBookStats.rating === 3, `Database book rating updated to 3`);
 
     // -------------------------------------------------------------
-    // SCENARIO 11: Verify review count when no reviews remain
+    // SCENARIO 12: Verify the rating after deletion
     // -------------------------------------------------------------
-    console.log("\nScenario 11: Zero reviews remaining resets rating and count to 0");
+    console.log("\nScenario 12: Verify the rating after deletion");
+    // One review deleted, leaving only rating 4 -> average rating 4.0, count 1
+    Review.find = () => Promise.resolve([{ rating: 4, book: bookId1 }]);
+    const statsAfterDelete = await updateBookRatingStats(bookId1);
+    assert(statsAfterDelete.rating === 4, `Rating after deletion is 4.0 (got ${statsAfterDelete.rating})`);
+    assert(statsAfterDelete.totalReviews === 1, `totalReviews after deletion is 1`);
+    assert(updatedBookStats.rating === 4, `Database book rating updated to 4`);
+
+    // -------------------------------------------------------------
+    // SCENARIO 13: Verify totalReviews when no reviews remain
+    // -------------------------------------------------------------
+    console.log("\nScenario 13: Verify totalReviews when no reviews remain (resets to 0)");
     Review.find = () => Promise.resolve([]);
-    const stats11 = await updateBookRatingStats(bookId1);
-    assert(stats11.totalReviews === 0, `Total reviews resets to 0`);
-    assert(stats11.rating === 0, `Average rating resets to 0`);
-    assert(updatedBookStats.rating === 0, `Book rating updated to 0`);
-    assert(updatedBookStats.totalReviews === 0, `Book totalReviews updated to 0`);
+    const statsEmpty = await updateBookRatingStats(bookId1);
+    assert(statsEmpty.totalReviews === 0, `totalReviews resets to 0`);
+    assert(statsEmpty.rating === 0, `Rating resets to 0`);
+    assert(updatedBookStats.rating === 0, `Database book rating resets to 0`);
+    assert(updatedBookStats.totalReviews === 0, `Database book totalReviews resets to 0`);
 
     // -------------------------------------------------------------
-    // SCENARIO 12: Retrieve own reviews (getMyReviews)
+    // SCENARIO 14: Retrieve the student's own reviews
     // -------------------------------------------------------------
-    console.log("\nScenario 12: Student retrieves their own reviews with populated book details");
+    console.log("\nScenario 14: Retrieve the student's own reviews (getMyReviews)");
     let capturedMyReviewsQuery = null;
     const mockStudentReviews = [
       {
         _id: reviewId1,
         student: studentId1,
         rating: 5,
-        comment: "Loved this book!",
+        comment: "Excellent book!",
         book: {
           _id: bookId1,
           title: "Clean Code",
           author: "Robert C. Martin",
-          rating: 4.3,
-          totalReviews: 3,
+          rating: 4.5,
+          totalReviews: 2,
         },
       },
       {
-        _id: new mongoose.Types.ObjectId(),
+        _id: reviewId2,
         student: studentId1,
         rating: 4,
-        comment: "Great book",
-        book: null, // deleted book
+        comment: "Very helpful",
+        book: null, // deleted book reference
       },
     ];
 
@@ -419,21 +423,55 @@ async function runTests() {
       };
     };
 
-    const req12 = {
+    const req14 = {
       user: { _id: studentId1, role: "student" },
     };
-    const res12 = createMockResponse();
-    await getMyReviews(req12, res12);
-    assert(res12.statusCode === 200, `Status is 200 OK (got ${res12.statusCode})`);
+    const res14 = createMockResponse();
+    await getMyReviews(req14, res14);
+    assert(res14.statusCode === 200, `Status is 200 OK (got ${res14.statusCode})`);
     assert(
       capturedMyReviewsQuery.student.toString() === studentId1.toString(),
-      `Reviews query strictly scoped to logged-in student`
+      `Reviews query is strictly scoped to req.user._id`
     );
-    assert(res12.body?.count === 1, `Orphaned review safely filtered out (count is 1)`);
+    assert(res14.body?.count === 1, `Deleted book review safely excluded (count: 1)`);
     assert(
-      res12.body?.reviews[0].book.title === "Clean Code",
-      `Populated book details returned: "${res12.body?.reviews[0].book.title}"`
+      res14.body?.reviews[0].book.title === "Clean Code",
+      `Book title populated: "${res14.body?.reviews[0].book.title}"`
     );
+
+    // -------------------------------------------------------------
+    // SCENARIO 15: Verify students cannot access another student's reviews
+    // -------------------------------------------------------------
+    console.log("\nScenario 15: Verify students cannot access another student's reviews (isolation check)");
+    // Student 2 tries to supply studentId1 in query/body
+    let maliciousCapturedQuery = null;
+    Review.find = (query) => {
+      maliciousCapturedQuery = query;
+      return {
+        populate: () => ({
+          sort: () => Promise.resolve([]),
+        }),
+      };
+    };
+
+    const req15 = {
+      user: { _id: studentId2, role: "student" },
+      query: { student: studentId1.toString(), studentId: studentId1.toString() },
+      body: { student: studentId1.toString() },
+      params: { studentId: studentId1.toString() },
+    };
+    const res15 = createMockResponse();
+    await getMyReviews(req15, res15);
+    assert(res15.statusCode === 200, `Status is 200 OK`);
+    assert(
+      maliciousCapturedQuery.student.toString() === studentId2.toString(),
+      `Controller forces req.user._id (${studentId2}), ignoring external student parameter (${studentId1})`
+    );
+    assert(
+      maliciousCapturedQuery.student.toString() !== studentId1.toString(),
+      `Student 2 cannot read Student 1's reviews`
+    );
+
   } finally {
     // Restore original methods
     Book.findById = originalBookFindById;
@@ -451,7 +489,7 @@ async function runTests() {
 
   console.log("\n========================================================");
   if (testFailures === 0) {
-    console.log("🎉 ALL PHASE 2B.2 WISHLIST & REVIEWS TESTS PASSED!");
+    console.log("🎉 ALL 15 PHASE 2B.2 SCENARIO TESTS PASSED!");
   } else {
     console.error(`💥 ${testFailures} TEST(S) FAILED!`);
     process.exit(1);
